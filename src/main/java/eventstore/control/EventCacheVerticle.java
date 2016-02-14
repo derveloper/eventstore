@@ -2,19 +2,18 @@ package eventstore.control;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class EventCacheVerticle extends AbstractVerticle {
 	private Logger logger;
 	private EventBus eventBus;
-	private final List<JsonObject> eventCache = new LinkedList<>();
+	private final Map<String, JsonObject> eventCache = new HashMap<>();
 
 	@Override
 	public void start() throws Exception {
@@ -25,9 +24,16 @@ public class EventCacheVerticle extends AbstractVerticle {
 			logger.debug("consume read.cache.events");
 			message.reply(Json.encode(eventCache));
 		});
-		eventBus.consumer("write.store.events", message -> {
-			logger.debug("writing to cache: " + ((JsonObject)message.body()).encodePrettily());
-			eventCache.add((JsonObject)message.body());
-		});
+		eventBus.consumer("write.store.events", this::writeCache);
+		eventBus.consumer("write.cache.events", this::writeCache);
+	}
+
+	private void writeCache(Message<Object> message) {
+		final JsonObject body = (JsonObject) message.body();
+		logger.debug("writing to cache: " + (body).encodePrettily());
+		final String id = body.getString("id");
+		if(!eventCache.containsKey(id)) {
+			eventCache.put(id, body);
+		}
 	}
 }

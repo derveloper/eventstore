@@ -65,17 +65,17 @@ public class ApiRouterTest {
 				.handler(response -> {
 					context.assertEquals(response.statusCode(), 201);
 					context.assertTrue(response.headers().get("content-type").contains("application/json"));
-					vertx.createHttpClient().getNow(port, "localhost", "/stream", response2 -> {
-						context.assertEquals(response2.statusCode(), 200);
-						context.assertEquals(response2.headers().get("content-type"), "application/json");
-						response2.bodyHandler(body2 -> {
-							final JsonArray jsonArray = new JsonArray(body2.toString());
-							final Optional<Object> o1 = jsonArray.stream()
-									.filter(o -> ((JsonObject) o).getJsonObject("data") != null)
-									.findAny();
-							context.assertTrue(o1.isPresent());
-							o1.ifPresent(o -> context.assertTrue(((JsonObject)o).getJsonObject("data").equals(data)));
-							async.complete();
+					response.bodyHandler(buffer -> {
+						final JsonObject jsonObject = new JsonObject(buffer.toString());
+						final String id = jsonObject.getString("id");
+						vertx.createHttpClient().getNow(port, "localhost", "/stream", response2 -> {
+							context.assertEquals(response2.statusCode(), 200);
+							context.assertEquals(response2.headers().get("content-type"), "application/json");
+							response2.bodyHandler(body2 -> {
+								final JsonObject jsonObject2 = new JsonObject(body2.toString()).getJsonObject(id);
+								context.assertTrue(jsonObject2.getJsonObject("data").equals(data));
+								async.complete();
+							});
 						});
 					});
 				})
