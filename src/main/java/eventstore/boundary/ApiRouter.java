@@ -1,14 +1,14 @@
 package eventstore.boundary;
 
-import eventstore.entity.AckedMessage;
-import io.netty.util.CharsetUtil;
+import eventstore.entity.PersistedEvent;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.eventbus.MessageCodec;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -17,48 +17,15 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.util.List;
 
 public class ApiRouter extends AbstractVerticle {
 	private EventBus eventBus;
-	private final Logger logger;
-
-	public ApiRouter() {
-		logger = LoggerFactory.getLogger(getClass());
-	}
+	private Logger logger;
 
 	@Override
 	public void start() throws Exception {
+		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
 		eventBus = vertx.eventBus();
-		eventBus.registerDefaultCodec(AckedMessage.class, new MessageCodec<AckedMessage, Object>() {
-			public void encodeToWire(final Buffer buffer, final AckedMessage ackedMessage) {
-				final String strJson = Json.encode(ackedMessage);
-				final byte[] encoded = strJson.getBytes(CharsetUtil.UTF_8);
-				buffer.appendInt(encoded.length);
-				final Buffer buff = Buffer.buffer(encoded);
-				buffer.appendBuffer(buff);
-			}
-
-			public String decodeFromWire(int pos, final Buffer buffer) {
-				final int length = buffer.getInt(pos);
-				pos += 4;
-				final byte[] encoded = buffer.getBytes(pos, pos + length);
-				return new String(encoded, CharsetUtil.UTF_8);
-			}
-
-			public String transform(final AckedMessage ackedMessage) {
-				return Json.encode(ackedMessage);
-			}
-
-			public String name() {
-				return "AckedMessageCodec";
-			}
-
-			public byte systemCodecID() {
-				return (byte) -1;
-			}
-		});
 		final HttpServer httpServer = vertx.createHttpServer();
 		final Router router = Router.router(vertx);
 		router.route().handler(BodyHandler.create());
@@ -71,32 +38,47 @@ public class ApiRouter extends AbstractVerticle {
 
 	private Handler<RoutingContext> sendMessage(String address, boolean respondWithReply) {
 		return routingContext -> {
-			if(respondWithReply) {
-				final String message;
-				if(routingContext.getBody().length() > 0) {
-					message = routingContext.getBodyAsJson().encodePrettily();
-				}
-				else {
-					message = "{}";
-				}
+			routingContext.response().putHeader("content-type", "application/json");
+			final JsonObject message;
+			if (routingContext.getBody().length() > 0) {
+				message = routingContext.getBodyAsJson();
+			} else {
+				message = new JsonObject();
+			}
 
+			if (respondWithReply) {
 				eventBus.send(address, message, reply -> {
 					if (reply.succeeded()) {
-						routingContext.response().end((String) reply.result().body());
+						final String replyBody = (String) reply.result().body();
+						final String responseBody = replyBody != null && replyBody.startsWith("[")
+								? new JsonArray(replyBody).encodePrettily()
+								: new JsonObject(replyBody).encodePrettily();
+
+						logger.debug("http response: " + responseBody);
+
+						routingContext.response().setStatusCode(HttpResponseStatus.OK.code()).end(responseBody);
+					}
+					else {
+						logger.warn("http respondWithReply failed: " + reply.cause().getMessage());
+
+						routingContext.response().setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()).end();
 					}
 				});
-			}
-			else {
-				routingContext.response().end();
-				eventBus.send(address, routingContext.getBodyAsString());
+			} else {
+				PersistedEvent event = new PersistedEvent(
+						message.getString("eventType", "undefined"),
+						message.getJsonObject("data", new JsonObject()));
+				int statusCode = HttpMethod.POST.equals(routingContext.request().method())
+						? HttpResponseStatus.CREATED.code()
+						: HttpResponseStatus.NO_CONTENT.code();
+				routingContext.response().setStatusCode(statusCode).end();
+				eventBus.publish(address, new JsonObject(Json.encode(event)));
 			}
 		};
 	}
 
 	private void listen(HttpServer httpServer, Router router) throws IOException {
-		ServerSocket socket = new ServerSocket(0);
-		final int localPort = socket.getLocalPort();
-		socket.close();
+		final Integer localPort = config().getInteger("http.port");
 
 		logger.info("Listening on " + localPort);
 

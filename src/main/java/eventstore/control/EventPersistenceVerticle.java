@@ -7,11 +7,10 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-public class EventCacheVerticle extends AbstractVerticle {
+public class EventPersistenceVerticle extends AbstractVerticle {
 	private Logger logger;
 	private EventBus eventBus;
 	private final List<JsonObject> eventCache = new LinkedList<>();
@@ -21,12 +20,12 @@ public class EventCacheVerticle extends AbstractVerticle {
 		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
 		eventBus = vertx.eventBus();
 
-		eventBus.consumer("read.cache.events", message -> {
-			logger.debug("consume read.cache.events");
+		eventBus.consumer("read.persisted.events", message -> {
+			logger.debug("consume read.persisted.events");
 			message.reply(Json.encode(eventCache));
 		});
 		eventBus.consumer("write.store.events", message -> {
-			logger.debug("writing to cache: " + ((JsonObject)message.body()).encodePrettily());
+			logger.debug("writing to db: " + ((JsonObject)message.body()).encodePrettily());
 			eventCache.add((JsonObject)message.body());
 		});
 	}
