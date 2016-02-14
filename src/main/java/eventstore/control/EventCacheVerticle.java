@@ -28,7 +28,7 @@ public class EventCacheVerticle extends AbstractVerticle {
 		eventBus.consumer("write.cache.events", this::writeCache);
 	}
 
-	private void writeCache(Message<Object> message) {
+	private void writeCache(final Message<Object> message) {
 		final JsonObject body = (JsonObject) message.body();
 		logger.debug("writing to cache: " + (body).encodePrettily());
 		final String id = body.getString("id");

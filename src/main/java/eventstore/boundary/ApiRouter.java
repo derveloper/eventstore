@@ -36,7 +36,7 @@ public class ApiRouter extends AbstractVerticle {
 		listen(httpServer, router);
 	}
 
-	private Handler<RoutingContext> sendMessage(String address, boolean respondWithReply) {
+	private Handler<RoutingContext> sendMessage(final String address, final boolean respondWithReply) {
 		return routingContext -> {
 			routingContext.response().putHeader("content-type", "application/json");
 			final JsonObject message;
@@ -65,10 +65,10 @@ public class ApiRouter extends AbstractVerticle {
 					}
 				});
 			} else {
-				PersistedEvent event = new PersistedEvent(
+				final PersistedEvent event = new PersistedEvent(
 						message.getString("eventType", "undefined"),
 						message.getJsonObject("data", new JsonObject()));
-				int statusCode = HttpMethod.POST.equals(routingContext.request().method())
+				final int statusCode = HttpMethod.POST.equals(routingContext.request().method())
 						? HttpResponseStatus.CREATED.code()
 						: HttpResponseStatus.NO_CONTENT.code();
 				final String responseBody = Json.encode(event);
@@ -79,7 +79,7 @@ public class ApiRouter extends AbstractVerticle {
 		};
 	}
 
-	private void listen(HttpServer httpServer, Router router) throws IOException {
+	private void listen(final HttpServer httpServer, final Router router) throws IOException {
 		final Integer localPort = config().getInteger("http.port");
 
 		logger.info("Listening on " + localPort);

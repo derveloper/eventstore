@@ -13,10 +13,10 @@ import java.io.IOException;
 import java.net.ServerSocket;
 
 public class EventstoreMain {
-	public static void main(String[] args) {
+	public static void main(final String[] args) {
 		final Vertx vertx = Vertx.vertx();
 		try {
-			ServerSocket socket = new ServerSocket(0);
+			final ServerSocket socket = new ServerSocket(0);
 			final int localPort = socket.getLocalPort();
 			socket.close();
 
@@ -25,7 +25,7 @@ public class EventstoreMain {
 			vertx.deployVerticle(new WriteEventsVerticle());
 			vertx.deployVerticle(new ReadEventsVerticle());
 			vertx.deployVerticle(new ApiRouter(), new DeploymentOptions().setConfig(new JsonObject().put("http.port", localPort)));
-		} catch (IOException e) {
+		} catch (final IOException e) {
 			System.out.println("could not allocate free port!");
 			System.exit(-1);
 		}

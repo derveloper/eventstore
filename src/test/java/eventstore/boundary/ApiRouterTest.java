@@ -28,9 +28,9 @@ public class ApiRouterTest {
 	private int port;
 
 	@Before
-	public void setUp(TestContext context) throws IOException {
+	public void setUp(final TestContext context) throws IOException {
 		vertx = Vertx.vertx();
-		ServerSocket socket = new ServerSocket(0);
+		final ServerSocket socket = new ServerSocket(0);
 		port = socket.getLocalPort();
 		socket.close();
 
@@ -46,12 +46,12 @@ public class ApiRouterTest {
 	}
 
 	@After
-	public void tearDown(TestContext context) {
+	public void tearDown(final TestContext context) {
 		vertx.close(context.asyncAssertSuccess());
 	}
 
 	@Test
-	public void shouldFetchCorrectEventAfterPostingIt(TestContext context) {
+	public void shouldFetchCorrectEventAfterPostingIt(final TestContext context) {
 		final Async async = context.async();
 		final JsonObject data = new JsonObject().put("foo", "bar");
 		final String json = new JsonObject()

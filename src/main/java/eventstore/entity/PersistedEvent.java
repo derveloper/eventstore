@@ -14,7 +14,7 @@ public class PersistedEvent implements Serializable {
 	public PersistedEvent() {
 	}
 
-	public PersistedEvent(String eventType, Object data) {
+	public PersistedEvent(final String eventType, final Object data) {
 		this.id = UUID.randomUUID().toString();
 		this.createdAt = new Date();
 		this.eventType = eventType;
@@ -22,10 +22,10 @@ public class PersistedEvent implements Serializable {
 	}
 
 	@Override
-	public boolean equals(Object o) {
+	public boolean equals(final Object o) {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
-		PersistedEvent that = (PersistedEvent) o;
+		final PersistedEvent that = (PersistedEvent) o;
 		return Objects.equals(id, that.id) &&
 				Objects.equals(eventType, that.eventType) &&
 				Objects.equals(createdAt, that.createdAt) &&
