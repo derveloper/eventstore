@@ -8,8 +8,6 @@ import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -72,12 +70,81 @@ public class ApiRouterTest {
 							context.assertEquals(response2.statusCode(), 200);
 							context.assertEquals(response2.headers().get("content-type"), "application/json");
 							response2.bodyHandler(body2 -> {
-								final JsonObject jsonObject2 = new JsonObject(body2.toString()).getJsonObject(id);
-								context.assertTrue(jsonObject2.getJsonObject("data").equals(data));
+								final JsonArray jsonArray = new JsonArray(body2.toString());
+								final Optional<Object> optional = jsonArray.stream()
+										.filter(o -> {
+											final JsonObject object = (JsonObject) o;
+											return id.equals(object.getString("id"));
+										})
+										.findAny();
+								context.assertTrue(optional.isPresent());
+								optional.ifPresent(o -> context.assertTrue(((JsonObject) o).getJsonObject("data").equals(data)));
 								async.complete();
 							});
 						});
 					});
+				})
+				.write(json)
+				.end();
+	}
+
+	@Test
+	public void shouldQueryCorrectEventAfterPostingIt(final TestContext context) {
+		final Async async = context.async();
+		final JsonObject data = new JsonObject().put("foo", "bar");
+		final String json = new JsonObject()
+				.put("eventType", "createFoo")
+				.put("data", data)
+				.encodePrettily();
+		final String length = Integer.toString(json.length());
+		vertx.createHttpClient().post(port, "localhost", "/stream")
+				.putHeader("content-type", "application/json")
+				.putHeader("content-length", length)
+				.handler(response -> {
+					context.assertEquals(response.statusCode(), 201);
+					context.assertTrue(response.headers().get("content-type").contains("application/json"));
+					response.bodyHandler(buffer -> {
+						final JsonObject jsonObject = new JsonObject(buffer.toString());
+						final String id = jsonObject.getString("id");
+						vertx.createHttpClient().getNow(port, "localhost", "/stream?id=" + id, response2 -> {
+							context.assertEquals(response2.statusCode(), 200);
+							context.assertEquals(response2.headers().get("content-type"), "application/json");
+							response2.bodyHandler(body2 -> {
+								final JsonArray jsonArray = new JsonArray(body2.toString());
+								context.assertTrue(jsonArray.getJsonObject(0).getJsonObject("data").equals(data));
+								async.complete();
+							});
+						});
+					});
+				})
+				.write(json)
+				.end();
+	}
+
+	@Test
+	public void shouldQueryCorrectEventAfterPostingItFromDB(final TestContext context) {
+		final Async async = context.async();
+		final JsonObject data = new JsonObject().put("foo", "bar");
+		final String json = new JsonObject()
+				.put("eventType", "createFoo")
+				.put("data", data)
+				.encodePrettily();
+		final String length = Integer.toString(json.length());
+		vertx.createHttpClient().post(port, "localhost", "/stream")
+				.putHeader("content-type", "application/json")
+				.putHeader("content-length", length)
+				.handler(response -> {
+					context.assertEquals(response.statusCode(), 201);
+					context.assertTrue(response.headers().get("content-type").contains("application/json"));
+					response.bodyHandler(buffer -> vertx.createHttpClient().getNow(port, "localhost", "/stream?eventType=createFoo", response2 -> {
+						context.assertEquals(response2.statusCode(), 200);
+						context.assertEquals(response2.headers().get("content-type"), "application/json");
+						response2.bodyHandler(body2 -> {
+							final JsonArray jsonArray = new JsonArray(body2.toString());
+							context.assertTrue(jsonArray.getJsonObject(0).getJsonObject("data").equals(data));
+							async.complete();
+						});
+					}));
 				})
 				.write(json)
 				.end();

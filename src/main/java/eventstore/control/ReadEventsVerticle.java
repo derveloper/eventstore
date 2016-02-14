@@ -1,6 +1,7 @@
 package eventstore.control;
 
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -16,12 +17,15 @@ public class ReadEventsVerticle extends AbstractVerticle {
 		eventBus = vertx.eventBus();
 		eventBus.consumer("read.events", message -> {
 			logger.debug("consume read.events: " + ((JsonObject)message.body()).encodePrettily());
-			eventBus.send("read.cache.events", message.body(), messageAsyncResult -> {
+			DeliveryOptions cacheDeliveryOptions = new DeliveryOptions()
+					.setSendTimeout(200);
+			eventBus.send("read.cache.events", message.body(), cacheDeliveryOptions, messageAsyncResult -> {
 				if(messageAsyncResult.succeeded()) {
 					logger.debug("reply from read.cache.events");
 					message.reply(messageAsyncResult.result().body());
 				}
 				else {
+					logger.debug("reply from read.cache.events not successful, getting event from db");
 					eventBus.send("read.persisted.events", message.body(), dbMessageAsyncResult -> {
 						if(dbMessageAsyncResult.succeeded()) {
 							logger.debug("reply from read.persisted.events");

@@ -17,6 +17,8 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
 
 public class ApiRouter extends AbstractVerticle {
 	private EventBus eventBus;
@@ -39,20 +41,32 @@ public class ApiRouter extends AbstractVerticle {
 	private Handler<RoutingContext> sendMessage(final String address, final boolean respondWithReply) {
 		return routingContext -> {
 			routingContext.response().putHeader("content-type", "application/json");
-			final JsonObject message;
+			final JsonObject requestBody;
 			if (routingContext.getBody().length() > 0) {
-				message = routingContext.getBodyAsJson();
+				requestBody = routingContext.getBodyAsJson();
 			} else {
-				message = new JsonObject();
+				requestBody = new JsonObject();
+			}
+
+			for (Map.Entry<String, String> entry : routingContext.request().params()) {
+				requestBody.put(entry.getKey(), entry.getValue());
 			}
 
 			if (respondWithReply) {
-				eventBus.send(address, message, reply -> {
+				eventBus.send(address, requestBody, reply -> {
 					if (reply.succeeded()) {
-						final String replyBody = (String) reply.result().body();
-						final String responseBody = replyBody != null && replyBody.startsWith("[")
-								? new JsonArray(replyBody).encodePrettily()
-								: new JsonObject(replyBody).encodePrettily();
+						final Object body = reply.result().body();
+						final String responseBody;
+
+						if(body instanceof JsonArray) {
+							responseBody = ((JsonArray)body).encodePrettily();
+						}
+						else if(body instanceof JsonObject) {
+							responseBody = ((JsonObject)body).encodePrettily();
+						}
+						else {
+							responseBody = (String)body;
+						}
 
 						logger.debug("http response: " + responseBody);
 
@@ -66,8 +80,8 @@ public class ApiRouter extends AbstractVerticle {
 				});
 			} else {
 				final PersistedEvent event = new PersistedEvent(
-						message.getString("eventType", "undefined"),
-						message.getJsonObject("data", new JsonObject()));
+						requestBody.getString("eventType", "undefined"),
+						requestBody.getJsonObject("data", new JsonObject()));
 				final int statusCode = HttpMethod.POST.equals(routingContext.request().method())
 						? HttpResponseStatus.CREATED.code()
 						: HttpResponseStatus.NO_CONTENT.code();
