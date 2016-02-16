@@ -13,13 +13,12 @@ import java.util.*;
 
 public class EventCacheVerticle extends AbstractVerticle {
 	private Logger logger;
-	private EventBus eventBus;
-	private final Map<String, JsonObject> eventCache = new HashMap<>();
+	private final Map<String, JsonObject> eventCache = new LinkedHashMap<>();
 
 	@Override
 	public void start() throws Exception {
 		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
-		eventBus = vertx.eventBus();
+		final EventBus eventBus = vertx.eventBus();
 
 		eventBus.consumer("read.cache.events", message -> {
 			final JsonObject body = (JsonObject) message.body();

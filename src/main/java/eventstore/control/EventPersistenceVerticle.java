@@ -33,9 +33,8 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 
 	private Handler<Message<Object>> writeStoreEventsConsumer() {
 		return message -> {
-			final JsonObject body = (JsonObject) message.body();
-			final String id = body.getString("id");
-			saveEventIfNotDuplicated(body, id);
+			final JsonArray body = (JsonArray) message.body();
+			saveEventIfNotDuplicated(body);
 		};
 	}
 
@@ -62,20 +61,24 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 		};
 	}
 
-	private void saveEventIfNotDuplicated(JsonObject body, String id) {
-		mongoClient.find("events", new JsonObject().put("id", id), findResult -> {
-			if(findResult.succeeded() && findResult.result().isEmpty()) {
-				logger.debug("writing to db: " + body.encodePrettily());
-				saveToMongo(body);
-			}
-			else if(findResult.succeeded()) {
-				eventBus.send("write.store.events.duplicated",
-						new JsonObject().put("message", "duplicated event id: " + id));
-			}
-			else if(findResult.failed()) {
-				eventBus.send("read.idempotent.store.events.failed",
-						new JsonObject().put("error", findResult.cause().getMessage()));
-			}
+	private void saveEventIfNotDuplicated(JsonArray body) {
+		body.forEach(o -> {
+			final JsonObject jsonObject = (JsonObject) o;
+			final String id = jsonObject.getString("id");
+			mongoClient.find("events", new JsonObject().put("id", id), findResult -> {
+				if(findResult.succeeded() && findResult.result().isEmpty()) {
+					logger.debug("writing to db: " + body.encodePrettily());
+					saveToMongo(jsonObject);
+				}
+				else if(findResult.succeeded()) {
+					eventBus.send("write.store.events.duplicated",
+							new JsonObject().put("message", "duplicated event id: " + id));
+				}
+				else if(findResult.failed()) {
+					eventBus.send("read.idempotent.store.events.failed",
+							new JsonObject().put("error", findResult.cause().getMessage()));
+				}
+			});
 		});
 	}
 
@@ -85,6 +88,9 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 				logger.error("failed writing to db: " + saveResult.cause().getMessage());
 				eventBus.send("write.store.events.failed",
 						new JsonObject().put("error", saveResult.cause().getMessage()));
+			}
+			else {
+				eventBus.send("write.store.events.persisted", body);
 			}
 		});
 	}

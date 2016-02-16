@@ -17,7 +17,6 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.Map;
 
 public class ApiRouter extends AbstractVerticle {
@@ -41,18 +40,19 @@ public class ApiRouter extends AbstractVerticle {
 	private Handler<RoutingContext> sendMessage(final String address, final boolean respondWithReply) {
 		return routingContext -> {
 			routingContext.response().putHeader("content-type", "application/json");
-			final JsonObject requestBody;
-			if (routingContext.getBody().length() > 0) {
-				requestBody = routingContext.getBodyAsJson();
-			} else {
-				requestBody = new JsonObject();
-			}
-
-			for (Map.Entry<String, String> entry : routingContext.request().params()) {
-				requestBody.put(entry.getKey(), entry.getValue());
-			}
 
 			if (respondWithReply) {
+				final JsonObject requestBody;
+				if (routingContext.getBody().length() > 0) {
+					requestBody = routingContext.getBodyAsJson();
+				} else {
+					requestBody = new JsonObject();
+				}
+
+				for (Map.Entry<String, String> entry : routingContext.request().params()) {
+					requestBody.put(entry.getKey(), entry.getValue());
+				}
+
 				eventBus.send(address, requestBody, reply -> {
 					if (reply.succeeded()) {
 						final Object body = reply.result().body();
@@ -79,16 +79,29 @@ public class ApiRouter extends AbstractVerticle {
 					}
 				});
 			} else {
-				final PersistedEvent event = new PersistedEvent(
-						requestBody.getString("eventType", "undefined"),
-						requestBody.getJsonObject("data", new JsonObject()));
+				final String bodyAsString = routingContext.getBodyAsString();
+				final JsonArray events = new JsonArray();
+				if(bodyAsString.trim().startsWith("[")) {
+					routingContext.getBodyAsJsonArray().forEach(o -> {
+						final JsonObject jsonObject = (JsonObject) o;
+						events.add(new JsonObject(Json.encode(new PersistedEvent(
+								jsonObject.getString("eventType", "undefined"),
+								jsonObject.getJsonObject("data", new JsonObject())))));
+					});
+				}
+				else {
+					events.add(new JsonObject(Json.encode(new PersistedEvent(
+							routingContext.getBodyAsJson().getString("eventType", "undefined"),
+							routingContext.getBodyAsJson().getJsonObject("data", new JsonObject())))));
+				}
+
 				final int statusCode = HttpMethod.POST.equals(routingContext.request().method())
 						? HttpResponseStatus.CREATED.code()
 						: HttpResponseStatus.NO_CONTENT.code();
-				final String responseBody = Json.encode(event);
+				final String responseBody = events.encodePrettily();
 				logger.debug("http optimistic response: " + responseBody);
 				routingContext.response().setStatusCode(statusCode).end(responseBody);
-				eventBus.publish(address, new JsonObject(responseBody));
+				eventBus.publish(address, events);
 			}
 		};
 	}

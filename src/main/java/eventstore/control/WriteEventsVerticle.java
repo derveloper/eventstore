@@ -2,7 +2,7 @@ package eventstore.control;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
@@ -15,7 +15,7 @@ public class WriteEventsVerticle extends AbstractVerticle {
 		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
 		eventBus = vertx.eventBus();
 		eventBus.consumer("write.events", message -> {
-			logger.debug("consume write.events " + ((JsonObject)message.body()).encodePrettily());
+			logger.debug("consume write.events " + ((JsonArray)message.body()).encodePrettily());
 			eventBus.publish("write.store.events", message.body());
 		});
 	}

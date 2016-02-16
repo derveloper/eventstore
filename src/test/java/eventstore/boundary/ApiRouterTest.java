@@ -8,6 +8,8 @@ import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.stomp.StompClient;
+import io.vertx.ext.stomp.StompClientConnection;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -20,27 +22,25 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.Optional;
 
+import static eventstore.boundary.Helper.deployBlocking;
+
 @RunWith(VertxUnitRunner.class)
 public class ApiRouterTest {
 	private Vertx vertx;
 	private int port;
 
 	@Before
-	public void setUp(final TestContext context) throws IOException {
+	public void setUp(final TestContext context) throws IOException, InterruptedException {
 		vertx = Vertx.vertx();
 		final ServerSocket socket = new ServerSocket(0);
 		port = socket.getLocalPort();
 		socket.close();
 
-		vertx.deployVerticle(EventPersistenceVerticle.class.getName());
-		vertx.deployVerticle(EventCacheVerticle.class.getName());
-		vertx.deployVerticle(WriteEventsVerticle.class.getName());
-		vertx.deployVerticle(ReadEventsVerticle.class.getName());
-
-		vertx.deployVerticle(
-				ApiRouter.class.getName(),
-				new DeploymentOptions().setConfig(new JsonObject().put("http.port", port)),
-				context.asyncAssertSuccess());
+		deployBlocking(vertx, context, new JsonObject(), EventPersistenceVerticle.class.getName());
+		deployBlocking(vertx, context, new JsonObject(), EventCacheVerticle.class.getName());
+		deployBlocking(vertx, context, new JsonObject(), WriteEventsVerticle.class.getName());
+		deployBlocking(vertx, context, new JsonObject(), ReadEventsVerticle.class.getName());
+		deployBlocking(vertx, context, new JsonObject().put("http.port", port), ApiRouter.class.getName());
 	}
 
 	@After
@@ -64,14 +64,14 @@ public class ApiRouterTest {
 					context.assertEquals(response.statusCode(), 201);
 					context.assertTrue(response.headers().get("content-type").contains("application/json"));
 					response.bodyHandler(buffer -> {
-						final JsonObject jsonObject = new JsonObject(buffer.toString());
-						final String id = jsonObject.getString("id");
+						final JsonArray jsonArray = new JsonArray(buffer.toString());
+						final String id = jsonArray.getJsonObject(0).getString("id");
 						vertx.createHttpClient().getNow(port, "localhost", "/stream", response2 -> {
 							context.assertEquals(response2.statusCode(), 200);
 							context.assertEquals(response2.headers().get("content-type"), "application/json");
 							response2.bodyHandler(body2 -> {
-								final JsonArray jsonArray = new JsonArray(body2.toString());
-								final Optional<Object> optional = jsonArray.stream()
+								final JsonArray jsonArray2 = new JsonArray(body2.toString());
+								final Optional<Object> optional = jsonArray2.stream()
 										.filter(o -> {
 											final JsonObject object = (JsonObject) o;
 											return id.equals(object.getString("id"));
@@ -104,8 +104,8 @@ public class ApiRouterTest {
 					context.assertEquals(response.statusCode(), 201);
 					context.assertTrue(response.headers().get("content-type").contains("application/json"));
 					response.bodyHandler(buffer -> {
-						final JsonObject jsonObject = new JsonObject(buffer.toString());
-						final String id = jsonObject.getString("id");
+						final JsonArray jsonArray1 = new JsonArray(buffer.toString());
+						final String id = jsonArray1.getJsonObject(0).getString("id");
 						vertx.createHttpClient().getNow(port, "localhost", "/stream?id=" + id, response2 -> {
 							context.assertEquals(response2.statusCode(), 200);
 							context.assertEquals(response2.headers().get("content-type"), "application/json");
