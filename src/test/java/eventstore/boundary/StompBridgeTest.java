@@ -21,6 +21,7 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.util.UUID;
 
 import static eventstore.boundary.Helper.deployBlocking;
 
@@ -57,8 +58,9 @@ public class StompBridgeTest {
 	@Test
 	public void shouldPublishEventOverSTOMP(final TestContext context) throws InterruptedException {
 		final JsonObject data = new JsonObject().put("foo", "bar");
+		final String eventType = UUID.randomUUID().toString();
 		final String json = new JsonObject()
-				.put("eventType", "createFoo")
+				.put("eventType", eventType)
 				.put("data", data)
 				.encodePrettily();
 		final Async async = context.async();
@@ -79,7 +81,7 @@ public class StompBridgeTest {
 									context.asyncAssertSuccess();
 									async.complete();
 								});
-						vertx.createHttpClient().post(port, "localhost", "/stream")
+						vertx.createHttpClient().post(port, "localhost", "/stream/test")
 								.putHeader("content-type", "application/json")
 								.putHeader("content-length", length)
 								.handler(response -> {

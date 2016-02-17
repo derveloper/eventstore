@@ -18,11 +18,13 @@ import org.junit.runner.RunWith;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.Optional;
+import java.util.UUID;
 
 import static eventstore.boundary.Helper.deployBlocking;
 
 @RunWith(VertxUnitRunner.class)
 public class ApiRouterTest {
+	private static final String TEST_URL = "/stream/test";
 	private Vertx vertx;
 	private int port;
 
@@ -54,7 +56,7 @@ public class ApiRouterTest {
 				.put("data", data)
 				.encodePrettily();
 		final String length = Integer.toString(json.length());
-		vertx.createHttpClient().post(port, "localhost", "/stream")
+		vertx.createHttpClient().post(port, "localhost", TEST_URL)
 				.putHeader("content-type", "application/json")
 				.putHeader("content-length", length)
 				.handler(response -> {
@@ -63,7 +65,7 @@ public class ApiRouterTest {
 					response.bodyHandler(buffer -> {
 						final JsonArray jsonArray = new JsonArray(buffer.toString());
 						final String id = jsonArray.getJsonObject(0).getString("id");
-						vertx.createHttpClient().getNow(port, "localhost", "/stream", response2 -> {
+						vertx.createHttpClient().getNow(port, "localhost", TEST_URL, response2 -> {
 							context.assertEquals(response2.statusCode(), 200);
 							context.assertEquals(response2.headers().get("content-type"), "application/json");
 							response2.bodyHandler(body2 -> {
@@ -94,7 +96,7 @@ public class ApiRouterTest {
 				.put("data", data)
 				.encodePrettily();
 		final String length = Integer.toString(json.length());
-		vertx.createHttpClient().post(port, "localhost", "/stream")
+		vertx.createHttpClient().post(port, "localhost", TEST_URL)
 				.putHeader("content-type", "application/json")
 				.putHeader("content-length", length)
 				.handler(response -> {
@@ -103,7 +105,7 @@ public class ApiRouterTest {
 					response.bodyHandler(buffer -> {
 						final JsonArray jsonArray1 = new JsonArray(buffer.toString());
 						final String id = jsonArray1.getJsonObject(0).getString("id");
-						vertx.createHttpClient().getNow(port, "localhost", "/stream?id=" + id, response2 -> {
+						vertx.createHttpClient().getNow(port, "localhost", TEST_URL + "?id=" + id, response2 -> {
 							context.assertEquals(response2.statusCode(), 200);
 							context.assertEquals(response2.headers().get("content-type"), "application/json");
 							response2.bodyHandler(body2 -> {
@@ -122,18 +124,24 @@ public class ApiRouterTest {
 	public void shouldQueryCorrectEventAfterPostingItFromDB(final TestContext context) {
 		final Async async = context.async();
 		final JsonObject data = new JsonObject().put("foo", "bar");
+		final String eventType = UUID.randomUUID().toString();
 		final String json = new JsonObject()
-				.put("eventType", "createFoo")
+				.put("eventType", eventType)
 				.put("data", data)
 				.encodePrettily();
 		final String length = Integer.toString(json.length());
-		vertx.createHttpClient().post(port, "localhost", "/stream")
+		vertx.createHttpClient().post(port, "localhost", TEST_URL)
 				.putHeader("content-type", "application/json")
 				.putHeader("content-length", length)
 				.handler(response -> {
 					context.assertEquals(response.statusCode(), 201);
 					context.assertTrue(response.headers().get("content-type").contains("application/json"));
-					response.bodyHandler(buffer -> vertx.createHttpClient().getNow(port, "localhost", "/stream?eventType=createFoo", response2 -> {
+					try {
+						Thread.sleep(500);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					response.bodyHandler(buffer -> vertx.createHttpClient().getNow(port, "localhost", TEST_URL + "?eventType=" + eventType, response2 -> {
 						context.assertEquals(response2.statusCode(), 200);
 						context.assertEquals(response2.headers().get("content-type"), "application/json");
 						response2.bodyHandler(body2 -> {

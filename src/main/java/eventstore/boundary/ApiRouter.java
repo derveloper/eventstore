@@ -5,6 +5,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.Json;
@@ -31,8 +32,8 @@ public class ApiRouter extends AbstractVerticle {
 		final Router router = Router.router(vertx);
 		router.route().handler(BodyHandler.create());
 
-		router.post("/stream/*").handler(sendMessage("write.events", false));
-		router.get("/stream/*").handler(sendMessage("read.events", true));
+		router.post("/stream/:streamName*").handler(sendMessage("write.events", false));
+		router.get("/stream/:streamName*").handler(sendMessage("read.events", true));
 
 		listen(httpServer, router);
 	}
@@ -53,6 +54,8 @@ public class ApiRouter extends AbstractVerticle {
 					requestBody.put(entry.getKey(), entry.getValue());
 				}
 
+				final String streamName = routingContext.request().getParam("streamName");
+				requestBody.put("streamName", streamName);
 				eventBus.send(address, requestBody, reply -> {
 					if (reply.succeeded()) {
 						final Object body = reply.result().body();
@@ -73,27 +76,33 @@ public class ApiRouter extends AbstractVerticle {
 						routingContext.response().setStatusCode(HttpResponseStatus.OK.code()).end(responseBody);
 					}
 					else {
-						logger.warn("http respondWithReply failed: " + reply.cause().getMessage());
+						final ReplyException cause = (ReplyException) reply.cause();
+						logger.warn("http respondWithReply failed: " + cause.getMessage());
 
-						routingContext.response().setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()).end();
+						routingContext.response().setStatusCode(cause.failureCode()).end();
 					}
 				});
 			} else {
 				final String bodyAsString = routingContext.getBodyAsString();
 				final JsonArray events = new JsonArray();
+				final String streamName = routingContext.request().getParam("streamName");
 				if(bodyAsString.trim().startsWith("[")) {
 					routingContext.getBodyAsJsonArray().forEach(o -> {
 						final JsonObject jsonObject = (JsonObject) o;
 						events.add(new JsonObject(Json.encode(new PersistedEvent(
+								streamName,
 								jsonObject.getString("eventType", "undefined"),
 								jsonObject.getJsonObject("data", new JsonObject())))));
 					});
 				}
 				else {
 					events.add(new JsonObject(Json.encode(new PersistedEvent(
+							streamName,
 							routingContext.getBodyAsJson().getString("eventType", "undefined"),
 							routingContext.getBodyAsJson().getJsonObject("data", new JsonObject())))));
 				}
+
+				eventBus.publish(address, events);
 
 				final int statusCode = HttpMethod.POST.equals(routingContext.request().method())
 						? HttpResponseStatus.CREATED.code()
@@ -101,7 +110,6 @@ public class ApiRouter extends AbstractVerticle {
 				final String responseBody = events.encodePrettily();
 				logger.debug("http optimistic response: " + responseBody);
 				routingContext.response().setStatusCode(statusCode).end(responseBody);
-				eventBus.publish(address, events);
 			}
 		};
 	}

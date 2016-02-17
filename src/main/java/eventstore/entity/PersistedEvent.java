@@ -1,21 +1,22 @@
 package eventstore.entity;
 
+import io.vertx.core.json.JsonObject;
+
 import java.io.Serializable;
 import java.util.Date;
 import java.util.Objects;
 import java.util.UUID;
 
 public class PersistedEvent implements Serializable {
-	public String id;
-	public String eventType;
-	public Date createdAt;
-	public Object data;
+	final public String streamName;
+	final public String id;
+	final public String eventType;
+	final public Date createdAt;
+	final public Object data;
 
-	public PersistedEvent() {
-	}
-
-	public PersistedEvent(final String eventType, final Object data) {
+	public PersistedEvent(String streamName, String eventType, Object data) {
 		this.id = UUID.randomUUID().toString();
+		this.streamName = streamName;
 		this.createdAt = new Date();
 		this.eventType = eventType;
 		this.data = data;
@@ -34,13 +35,14 @@ public class PersistedEvent implements Serializable {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(id, eventType, createdAt, data);
+		return Objects.hash(id, streamName, eventType, createdAt, data);
 	}
 
 	@Override
 	public String toString() {
 		return "PersistedEvent{" +
 				"id=" + id +
+				", streamName='" + streamName + '\'' +
 				", eventType='" + eventType + '\'' +
 				", createdAt=" + createdAt +
 				", data=" + data +
