@@ -51,12 +51,13 @@ public class ApiRouterTest {
 	public void shouldFetchCorrectEventAfterPostingIt(final TestContext context) {
 		final Async async = context.async();
 		final JsonObject data = new JsonObject().put("foo", "bar");
+		final String eventType = UUID.randomUUID().toString();
 		final String json = new JsonObject()
-				.put("eventType", "createFoo")
+				.put("eventType", eventType)
 				.put("data", data)
 				.encodePrettily();
 		final String length = Integer.toString(json.length());
-		vertx.createHttpClient().post(port, "localhost", TEST_URL)
+		vertx.createHttpClient().post(port, "localhost", testUrl(eventType))
 				.putHeader("content-type", "application/json")
 				.putHeader("content-length", length)
 				.handler(response -> {
@@ -65,7 +66,7 @@ public class ApiRouterTest {
 					response.bodyHandler(buffer -> {
 						final JsonArray jsonArray = new JsonArray(buffer.toString());
 						final String id = jsonArray.getJsonObject(0).getString("id");
-						vertx.createHttpClient().getNow(port, "localhost", TEST_URL, response2 -> {
+						vertx.createHttpClient().getNow(port, "localhost", testUrl(eventType), response2 -> {
 							context.assertEquals(response2.statusCode(), 200);
 							context.assertEquals(response2.headers().get("content-type"), "application/json");
 							response2.bodyHandler(body2 -> {
@@ -91,12 +92,13 @@ public class ApiRouterTest {
 	public void shouldQueryCorrectEventAfterPostingIt(final TestContext context) {
 		final Async async = context.async();
 		final JsonObject data = new JsonObject().put("foo", "bar");
+		final String eventType = UUID.randomUUID().toString();
 		final String json = new JsonObject()
-				.put("eventType", "createFoo")
+				.put("eventType", eventType)
 				.put("data", data)
 				.encodePrettily();
 		final String length = Integer.toString(json.length());
-		vertx.createHttpClient().post(port, "localhost", TEST_URL)
+		vertx.createHttpClient().post(port, "localhost", testUrl(eventType))
 				.putHeader("content-type", "application/json")
 				.putHeader("content-length", length)
 				.handler(response -> {
@@ -105,7 +107,7 @@ public class ApiRouterTest {
 					response.bodyHandler(buffer -> {
 						final JsonArray jsonArray1 = new JsonArray(buffer.toString());
 						final String id = jsonArray1.getJsonObject(0).getString("id");
-						vertx.createHttpClient().getNow(port, "localhost", TEST_URL + "?id=" + id, response2 -> {
+						vertx.createHttpClient().getNow(port, "localhost", testUrl(eventType) + "?id=" + id, response2 -> {
 							context.assertEquals(response2.statusCode(), 200);
 							context.assertEquals(response2.headers().get("content-type"), "application/json");
 							response2.bodyHandler(body2 -> {
@@ -120,6 +122,10 @@ public class ApiRouterTest {
 				.end();
 	}
 
+	private String testUrl(String eventType) {
+		return TEST_URL + eventType.split("-")[0];
+	}
+
 	@Test
 	public void shouldQueryCorrectEventAfterPostingItFromDB(final TestContext context) {
 		final Async async = context.async();
@@ -130,7 +136,7 @@ public class ApiRouterTest {
 				.put("data", data)
 				.encodePrettily();
 		final String length = Integer.toString(json.length());
-		vertx.createHttpClient().post(port, "localhost", TEST_URL)
+		vertx.createHttpClient().post(port, "localhost", testUrl(eventType))
 				.putHeader("content-type", "application/json")
 				.putHeader("content-length", length)
 				.handler(response -> {
@@ -141,7 +147,7 @@ public class ApiRouterTest {
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
-					response.bodyHandler(buffer -> vertx.createHttpClient().getNow(port, "localhost", TEST_URL + "?eventType=" + eventType, response2 -> {
+					response.bodyHandler(buffer -> vertx.createHttpClient().getNow(port, "localhost", testUrl(eventType) + "?eventType=" + eventType, response2 -> {
 						context.assertEquals(response2.statusCode(), 200);
 						context.assertEquals(response2.headers().get("content-type"), "application/json");
 						response2.bodyHandler(body2 -> {

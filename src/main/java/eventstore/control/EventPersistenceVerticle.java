@@ -41,9 +41,11 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 	private Handler<Message<Object>> readPersistedEventsConsumer() {
 		return message -> {
 			final JsonObject body = (JsonObject) message.body();
+			final String streamName = body.getString("streamName");
+			body.remove("streamName");
 			logger.debug("consume read.persisted.events: " + body.encodePrettily());
 
-			mongoClient.find("events", body, listAsyncResult -> {
+			mongoClient.find("events_" + streamName, body, listAsyncResult -> {
 				if(listAsyncResult.succeeded() && !listAsyncResult.result().isEmpty()) {
 					final JsonArray jsonArray = new JsonArray();
 					listAsyncResult.result().forEach(jsonArray::add);
@@ -65,10 +67,13 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 		body.forEach(o -> {
 			final JsonObject jsonObject = (JsonObject) o;
 			final String id = jsonObject.getString("id");
-			mongoClient.find("events", new JsonObject().put("id", id), findResult -> {
+			final String streamName = jsonObject.getString("streamName");
+			jsonObject.remove("streamName");
+			final String collectionName = "events_" + streamName;
+			mongoClient.find(collectionName, new JsonObject().put("id", id), findResult -> {
 				if(findResult.succeeded() && findResult.result().isEmpty()) {
 					logger.debug("writing to db: " + body.encodePrettily());
-					saveToMongo(jsonObject);
+					saveToMongo(jsonObject, collectionName);
 				}
 				else if(findResult.succeeded()) {
 					eventBus.send("write.store.events.duplicated",
@@ -82,8 +87,8 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 		});
 	}
 
-	private void saveToMongo(JsonObject body) {
-		mongoClient.save("events", body, saveResult -> {
+	private void saveToMongo(JsonObject body, String collectionName) {
+		mongoClient.save(collectionName, body, saveResult -> {
 			if(saveResult.failed()) {
 				logger.error("failed writing to db: " + saveResult.cause().getMessage());
 				eventBus.send("write.store.events.failed",

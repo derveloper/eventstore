@@ -28,6 +28,7 @@ import static eventstore.boundary.Helper.deployBlocking;
 
 @RunWith(VertxUnitRunner.class)
 public class StompBridgeTest {
+	private static final String TEST_URL = "/stream/test";
 	private Vertx vertx;
 	private int port;
 	private int port2;
@@ -81,7 +82,7 @@ public class StompBridgeTest {
 									context.asyncAssertSuccess();
 									async.complete();
 								});
-						vertx.createHttpClient().post(port, "localhost", "/stream/test")
+						vertx.createHttpClient().post(port, "localhost", testUrl(eventType))
 								.putHeader("content-type", "application/json")
 								.putHeader("content-length", length)
 								.handler(response -> {
@@ -97,5 +98,9 @@ public class StompBridgeTest {
 						async.complete();
 					}
 				});
+	}
+
+	private String testUrl(String eventType) {
+		return TEST_URL + eventType.split("-")[0];
 	}
 }

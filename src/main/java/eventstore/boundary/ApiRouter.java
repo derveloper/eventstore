@@ -107,6 +107,7 @@ public class ApiRouter extends AbstractVerticle {
 				final int statusCode = HttpMethod.POST.equals(routingContext.request().method())
 						? HttpResponseStatus.CREATED.code()
 						: HttpResponseStatus.NO_CONTENT.code();
+				events.forEach(o -> ((JsonObject)o).remove("streamName"));
 				final String responseBody = events.encodePrettily();
 				logger.debug("http optimistic response: " + responseBody);
 				routingContext.response().setStatusCode(statusCode).end(responseBody);

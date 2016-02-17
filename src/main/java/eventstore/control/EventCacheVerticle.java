@@ -22,6 +22,7 @@ public class EventCacheVerticle extends AbstractVerticle {
 
 		eventBus.consumer("read.cache.events", message -> {
 			final JsonObject body = (JsonObject) message.body();
+			body.remove("streamName");
 			logger.debug("consume read.cache.events: " + body.encodePrettily());
 			if(body.containsKey("id")) {
 				if(eventCache.containsKey(body.getString("id"))) {
