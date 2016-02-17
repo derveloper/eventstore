@@ -21,11 +21,8 @@ public class StompBridge extends AbstractVerticle {
 								.addInboundPermitted(new PermittedOptions().setAddressRegex("^.*$"))
 								.addOutboundPermitted(new PermittedOptions().setAddressRegex("^.*$"))
 						)
-						.connectHandler(serverFrame -> {
-							logger.info("STOMP client connected " + serverFrame.frame());
-						})
 				)
-				.listen(localPort, "localhost");
+				.listen(localPort, "0.0.0.0");
 		logger.info("STOMP listening on " + stompServer.actualPort());
 	}
 }

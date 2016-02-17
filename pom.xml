@@ -6,12 +6,26 @@
 
 	<groupId>cc.vileda</groupId>
 	<artifactId>eventstore</artifactId>
+	<packaging>pom</packaging>
 	<version>1.0-SNAPSHOT</version>
+	<modules>
+		<module>stomp-test-client</module>
+	</modules>
 
 	<properties>
 		<maven.compiler.target>1.8</maven.compiler.target>
 		<maven.compiler.source>1.8</maven.compiler.source>
 	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>io.vertx</groupId>
+				<artifactId>vertx-stomp</artifactId>
+				<version>3.2.1</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<dependencies>
 		<dependency>
@@ -37,7 +51,6 @@
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-stomp</artifactId>
-			<version>3.2.1</version>
 		</dependency>
 		<dependency>
 			<groupId>io.vertx</groupId>

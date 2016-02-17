@@ -56,44 +56,44 @@ public class StompBridgeTest {
 
 	@Test
 	public void shouldPublishEventOverSTOMP(final TestContext context) throws InterruptedException {
-		final Async async = context.async();
 		final JsonObject data = new JsonObject().put("foo", "bar");
 		final String json = new JsonObject()
 				.put("eventType", "createFoo")
 				.put("data", data)
 				.encodePrettily();
+		final Async async = context.async();
 		final String length = Integer.toString(json.length());
 		StompClient.create(vertx, new StompClientOptions()
 				.setHeartbeat(new JsonObject().put("x", 10000).put("y", 10000))
-				.setHost("localhost").setPort(port2))
+				.setHost("localhost").setPort(port2)
+		)
 				.connect(ar -> {
-					async.complete();
-					System.out.println(ar.result());
 					if (ar.succeeded()) {
-						async.complete();
 						System.out.println("connected to STOMP");
 						StompClientConnection connection = ar.result();
 						connection.subscribe("write.store.events.persisted",
 								frame -> {
 									System.out.println("Just received a frame from /queue : " + frame);
+									connection.disconnect();
+									connection.close();
 									context.asyncAssertSuccess();
+									async.complete();
 								});
+						vertx.createHttpClient().post(port, "localhost", "/stream")
+								.putHeader("content-type", "application/json")
+								.putHeader("content-length", length)
+								.handler(response -> {
+									context.assertEquals(response.statusCode(), 201);
+									context.assertTrue(response.headers().get("content-type").contains("application/json"));
+									async.complete();
+								})
+								.write(json)
+								.end();
 					} else {
 						System.out.println("Failed to connect to the STOMP server: " + ar.cause().toString());
 						context.asyncAssertFailure();
 						async.complete();
 					}
-					async.complete();
 				});
-		async.awaitSuccess();
-		vertx.createHttpClient().post(port, "localhost", "/stream")
-				.putHeader("content-type", "application/json")
-				.putHeader("content-length", length)
-				.handler(response -> {
-					context.assertEquals(response.statusCode(), 201);
-					context.assertTrue(response.headers().get("content-type").contains("application/json"));
-				})
-				.write(json)
-				.end();
 	}
 }
