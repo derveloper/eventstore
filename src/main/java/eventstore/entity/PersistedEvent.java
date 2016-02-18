@@ -1,18 +1,16 @@
 package eventstore.entity;
 
-import io.vertx.core.json.JsonObject;
-
 import java.io.Serializable;
 import java.util.Date;
 import java.util.Objects;
 import java.util.UUID;
 
 public class PersistedEvent implements Serializable {
-	final public String streamName;
-	final public String id;
-	final public String eventType;
-	final public Date createdAt;
-	final public Object data;
+	private final String streamName;
+	private final String id;
+	private final String eventType;
+	private final Date createdAt;
+	private final Object data;
 
 	public PersistedEvent(String streamName, String eventType, Object data) {
 		this.id = UUID.randomUUID().toString();

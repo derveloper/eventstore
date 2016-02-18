@@ -16,23 +16,21 @@ public class ReadEventsVerticle extends AbstractVerticle {
 		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
 		eventBus = vertx.eventBus();
 		eventBus.consumer("read.events", message -> {
-			logger.debug("consume read.events: " + ((JsonObject)message.body()).encodePrettily());
+			logger.debug("consume read.events: " + ((JsonObject) message.body()).encodePrettily());
 			DeliveryOptions cacheDeliveryOptions = new DeliveryOptions()
 					.setSendTimeout(200);
 			eventBus.send("read.cache.events", message.body(), cacheDeliveryOptions, messageAsyncResult -> {
-				if(messageAsyncResult.succeeded()) {
+				if (messageAsyncResult.succeeded()) {
 					logger.debug("reply from read.cache.events");
 					message.reply(messageAsyncResult.result().body());
-				}
-				else {
+				} else {
 					logger.debug("reply from read.cache.events not successful, getting event from db");
 					eventBus.send("read.persisted.events", message.body(), dbMessageAsyncResult -> {
-						if(dbMessageAsyncResult.succeeded()) {
+						if (dbMessageAsyncResult.succeeded()) {
 							logger.debug("reply from read.persisted.events");
 							eventBus.send("write.cache.events", dbMessageAsyncResult.result().body());
 							message.reply(dbMessageAsyncResult.result().body());
-						}
-						else {
+						} else {
 							logger.error("reply from read.persisted.events failed!");
 							message.fail(404, new JsonObject().put("error", "not found").encodePrettily());
 						}

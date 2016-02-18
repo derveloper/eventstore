@@ -15,7 +15,7 @@ public class WriteEventsVerticle extends AbstractVerticle {
 		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
 		eventBus = vertx.eventBus();
 		eventBus.consumer("write.events", message -> {
-			logger.debug("consume write.events " + ((JsonArray)message.body()).encodePrettily());
+			logger.debug("consume write.events " + ((JsonArray) message.body()).encodePrettily());
 			eventBus.publish("write.store.events", message.body());
 		});
 	}

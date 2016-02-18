@@ -19,6 +19,17 @@ import java.util.Map;
 public class StompBridge extends AbstractVerticle {
 	private Logger logger;
 
+	private static Map<String, Object> splitQuery(URI url) throws UnsupportedEncodingException {
+		Map<String, Object> query_pairs = new LinkedHashMap<>();
+		String query = url.getQuery();
+		String[] pairs = query.split("&");
+		for (String pair : pairs) {
+			int idx = pair.indexOf("=");
+			query_pairs.put(URLDecoder.decode(pair.substring(0, idx), "UTF-8"), URLDecoder.decode(pair.substring(idx + 1), "UTF-8"));
+		}
+		return query_pairs;
+	}
+
 	@Override
 	public void start() throws Exception {
 		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
@@ -31,7 +42,7 @@ public class StompBridge extends AbstractVerticle {
 								final URI uri = new URI(s.trim());
 								final JsonObject query = uri.toString().contains("?") ? new JsonObject(splitQuery(uri)) : new JsonObject();
 								final String[] split = uri.getPath().split("/");
-								if(split.length != 3) throw new URISyntaxException(uri.getPath(), "no stream specified");
+								if (split.length != 3) throw new URISyntaxException(uri.getPath(), "no stream specified");
 								query.put("streamName", split[2]);
 								query.put("address", s.trim());
 								logger.debug("subscribing: " + query.encodePrettily());
@@ -45,16 +56,5 @@ public class StompBridge extends AbstractVerticle {
 				)
 				.listen(localPort, "0.0.0.0");
 		logger.info("STOMP listening on " + stompServer.actualPort());
-	}
-
-	public static Map<String, Object> splitQuery(URI url) throws UnsupportedEncodingException {
-		Map<String, Object> query_pairs = new LinkedHashMap<>();
-		String query = url.getQuery();
-		String[] pairs = query.split("&");
-		for (String pair : pairs) {
-			int idx = pair.indexOf("=");
-			query_pairs.put(URLDecoder.decode(pair.substring(0, idx), "UTF-8"), URLDecoder.decode(pair.substring(idx + 1), "UTF-8"));
-		}
-		return query_pairs;
 	}
 }

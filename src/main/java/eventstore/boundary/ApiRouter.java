@@ -61,22 +61,19 @@ public class ApiRouter extends AbstractVerticle {
 						final Object body = reply.result().body();
 						final String responseBody;
 
-						if(body instanceof JsonArray) {
-							responseBody = ((JsonArray)body).encodePrettily();
-						}
-						else if(body instanceof JsonObject) {
-							responseBody = ((JsonObject)body).encodePrettily();
-						}
-						else {
-							responseBody = (String)body;
+						if (body instanceof JsonArray) {
+							responseBody = ((JsonArray) body).encodePrettily();
+						} else if (body instanceof JsonObject) {
+							responseBody = ((JsonObject) body).encodePrettily();
+						} else {
+							responseBody = (String) body;
 						}
 
 						logger.debug("http response: " + responseBody);
 
 						routingContext.response().setStatusCode(HttpResponseStatus.OK.code()).end(responseBody);
-					}
-					else {
-						final ReplyException cause = (ReplyException) reply.cause();
+					} else {
+						@SuppressWarnings("ThrowableResultOfMethodCallIgnored") final ReplyException cause = (ReplyException) reply.cause();
 						logger.warn("http respondWithReply failed: " + cause.getMessage());
 
 						routingContext.response().setStatusCode(cause.failureCode()).end();
@@ -86,7 +83,7 @@ public class ApiRouter extends AbstractVerticle {
 				final String bodyAsString = routingContext.getBodyAsString();
 				final JsonArray events = new JsonArray();
 				final String streamName = routingContext.request().getParam("streamName");
-				if(bodyAsString.trim().startsWith("[")) {
+				if (bodyAsString.trim().startsWith("[")) {
 					routingContext.getBodyAsJsonArray().forEach(o -> {
 						final JsonObject jsonObject = (JsonObject) o;
 						events.add(new JsonObject(Json.encode(new PersistedEvent(
@@ -94,8 +91,7 @@ public class ApiRouter extends AbstractVerticle {
 								jsonObject.getString("eventType", "undefined"),
 								jsonObject.getJsonObject("data", new JsonObject())))));
 					});
-				}
-				else {
+				} else {
 					events.add(new JsonObject(Json.encode(new PersistedEvent(
 							streamName,
 							routingContext.getBodyAsJson().getString("eventType", "undefined"),
@@ -107,7 +103,7 @@ public class ApiRouter extends AbstractVerticle {
 				final int statusCode = HttpMethod.POST.equals(routingContext.request().method())
 						? HttpResponseStatus.CREATED.code()
 						: HttpResponseStatus.NO_CONTENT.code();
-				events.forEach(o -> ((JsonObject)o).remove("streamName"));
+				events.forEach(o -> ((JsonObject) o).remove("streamName"));
 				final String responseBody = events.encodePrettily();
 				logger.debug("http optimistic response: " + responseBody);
 				routingContext.response().setStatusCode(statusCode).end(responseBody);
@@ -115,7 +111,7 @@ public class ApiRouter extends AbstractVerticle {
 		};
 	}
 
-	private void listen(final HttpServer httpServer, final Router router) throws IOException {
+	private void listen(final HttpServer httpServer, final Router router) {
 		final Integer localPort = config().getInteger("http.port");
 
 		logger.info("Listening on " + localPort);

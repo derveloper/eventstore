@@ -9,11 +9,12 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class EventCacheVerticle extends AbstractVerticle {
-	private Logger logger;
 	private final Map<String, Map<String, JsonObject>> eventCache = new LinkedHashMap<>();
+	private Logger logger;
 
 	@Override
 	public void start() throws Exception {
@@ -24,20 +25,17 @@ public class EventCacheVerticle extends AbstractVerticle {
 			final JsonObject body = (JsonObject) message.body();
 			final String streamName = (String) body.remove("streamName");
 			logger.debug("consume read.cache.events: " + body.encodePrettily());
-			if(body.containsKey("id")) {
-				if(eventCache.containsKey(streamName) && eventCache.get(streamName).containsKey(body.getString("id"))) {
+			if (body.containsKey("id")) {
+				if (eventCache.containsKey(streamName) && eventCache.get(streamName).containsKey(body.getString("id"))) {
 					message.reply(new JsonArray().add(new JsonObject(Json.encode(eventCache.get(streamName).get(body.getString("id"))))));
-				}
-				else {
+				} else {
 					message.fail(404, new JsonObject().put("error", "not found").encodePrettily());
 				}
-			}
-			else if(!body.isEmpty()) {
+			} else if (!body.isEmpty()) {
 				message.fail(404, new JsonObject().put("error", "not found").encodePrettily());
-			}
-			else {
+			} else {
 				final JsonArray jsonArray = new JsonArray();
-				if(eventCache.containsKey(streamName)) {
+				if (eventCache.containsKey(streamName)) {
 					eventCache.get(streamName).values().forEach(jsonArray::add);
 				}
 				message.reply(jsonArray);
@@ -50,27 +48,26 @@ public class EventCacheVerticle extends AbstractVerticle {
 	private void writeCache(final Message<Object> message) {
 		logger.debug("writing to cache");
 		final Object body1 = message.body();
-		if(body1 instanceof JsonArray) {
-			((JsonArray)body1).forEach(o -> {
+		if (body1 instanceof JsonArray) {
+			((JsonArray) body1).forEach(o -> {
 				final JsonObject object = (JsonObject) o;
 				final String streamName = (String) object.remove("streamName");
 				final String id = object.getString("id");
-				if(!eventCache.containsKey(streamName)) {
+				if (!eventCache.containsKey(streamName)) {
 					eventCache.put(streamName, new LinkedHashMap<>());
 				}
-				if(!eventCache.get(streamName).containsKey(id)) {
+				if (!eventCache.get(streamName).containsKey(id)) {
 					eventCache.get(streamName).put(id, object);
 				}
 			});
-		}
-		else {
+		} else {
 			final JsonObject body = (JsonObject) body1;
 			final String id = body.getString("id");
 			final String streamName = (String) body.remove("streamName");
-			if(!eventCache.containsKey(streamName)) {
+			if (!eventCache.containsKey(streamName)) {
 				eventCache.put(streamName, new LinkedHashMap<>());
 			}
-			if(!eventCache.containsKey(id)) {
+			if (!eventCache.containsKey(id)) {
 				eventCache.get(streamName).put(id, body);
 			}
 		}

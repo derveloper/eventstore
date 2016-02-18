@@ -24,7 +24,7 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 	private Logger logger;
 	private EventBus eventBus;
 	private MongoClient mongoClient;
-	private Map<String, List<JsonObject>> subscriptions = new HashMap<>();
+	private final Map<String, List<JsonObject>> subscriptions = new HashMap<>();
 	private StompClientConnection stompClientConnection;
 
 	@Override
@@ -37,15 +37,14 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 		eventBus = vertx.eventBus();
 
 		final Integer stompPort = config().getInteger("stomp.port");
-		if(stompPort != null) {
+		if (stompPort != null) {
 			StompClient.create(vertx, new StompClientOptions()
 					.setHost("0.0.0.0").setPort(stompPort)
 			).connect(ar -> {
 				if (ar.succeeded()) {
 					logger.debug("connected to STOMP");
 					stompClientConnection = ar.result();
-				}
-				else {
+				} else {
 					logger.warn("could not connect to STOMP", ar.cause());
 				}
 			});
@@ -85,7 +84,7 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 				} else if (listAsyncResult.succeeded()) {
 					message.fail(404, new JsonObject().put("error", "not found").encodePrettily());
 				} else {
-					final String failMessage = listAsyncResult.cause().getMessage();
+					@SuppressWarnings("ThrowableResultOfMethodCallIgnored") final String failMessage = listAsyncResult.cause().getMessage();
 					logger.error("failed reading from db: " + failMessage);
 					message.fail(500, new JsonObject().put("error", failMessage).encodePrettily());
 				}
@@ -107,6 +106,7 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 					eventBus.send("write.store.events.duplicated",
 							new JsonObject().put("message", "duplicated event id: " + id));
 				} else if (findResult.failed()) {
+					//noinspection ThrowableResultOfMethodCallIgnored,ThrowableResultOfMethodCallIgnored
 					eventBus.send("read.idempotent.store.events.failed",
 							new JsonObject().put("error", findResult.cause().getMessage()));
 				}
@@ -118,7 +118,9 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 		logger.debug("writing to db: " + body.encodePrettily());
 		mongoClient.save(collectionName, body, saveResult -> {
 			if (saveResult.failed()) {
+				//noinspection ThrowableResultOfMethodCallIgnored,ThrowableResultOfMethodCallIgnored
 				logger.error("failed writing to db: " + saveResult.cause().getMessage());
+				//noinspection ThrowableResultOfMethodCallIgnored
 				eventBus.send("write.store.events.failed",
 						new JsonObject().put("error", saveResult.cause().getMessage()));
 			} else {
