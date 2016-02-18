@@ -66,7 +66,7 @@ public class ApiRouterTest {
 					response.bodyHandler(buffer -> {
 						final JsonArray jsonArray = new JsonArray(buffer.toString());
 						final String id = jsonArray.getJsonObject(0).getString("id");
-						vertx.createHttpClient().getNow(port, "localhost", testUrl(eventType), response2 -> {
+						vertx.createHttpClient().get(port, "localhost", testUrl(eventType), response2 -> {
 							context.assertEquals(response2.statusCode(), 200);
 							context.assertEquals(response2.headers().get("content-type"), "application/json");
 							response2.bodyHandler(body2 -> {
@@ -80,11 +80,12 @@ public class ApiRouterTest {
 								context.assertTrue(optional.isPresent());
 								optional.ifPresent(o -> context.assertTrue(((JsonObject) o).getJsonObject("data").equals(data)));
 								async.complete();
-							});
-						});
+							}).exceptionHandler(throwable -> context.asyncAssertFailure());
+						}).exceptionHandler(throwable -> context.asyncAssertFailure()).end();
 					});
 				})
 				.write(json)
+				.exceptionHandler(throwable -> context.asyncAssertFailure())
 				.end();
 	}
 
@@ -107,18 +108,20 @@ public class ApiRouterTest {
 					response.bodyHandler(buffer -> {
 						final JsonArray jsonArray1 = new JsonArray(buffer.toString());
 						final String id = jsonArray1.getJsonObject(0).getString("id");
-						vertx.createHttpClient().getNow(port, "localhost", testUrl(eventType) + "?id=" + id, response2 -> {
+						vertx.createHttpClient().get(port, "localhost", testUrl(eventType) + "?id=" + id, response2 -> {
 							context.assertEquals(response2.statusCode(), 200);
 							context.assertEquals(response2.headers().get("content-type"), "application/json");
 							response2.bodyHandler(body2 -> {
 								final JsonArray jsonArray = new JsonArray(body2.toString());
 								context.assertTrue(jsonArray.getJsonObject(0).getJsonObject("data").equals(data));
 								async.complete();
-							});
-						});
+							})
+							.exceptionHandler(throwable -> context.asyncAssertFailure());
+						}).exceptionHandler(throwable -> context.asyncAssertFailure()).end();
 					});
 				})
 				.write(json)
+				.exceptionHandler(throwable -> context.asyncAssertFailure())
 				.end();
 	}
 
@@ -147,7 +150,7 @@ public class ApiRouterTest {
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
-					response.bodyHandler(buffer -> vertx.createHttpClient().getNow(port, "localhost", testUrl(eventType) + "?eventType=" + eventType, response2 -> {
+					response.bodyHandler(buffer -> vertx.createHttpClient().get(port, "localhost", testUrl(eventType) + "?eventType=" + eventType, response2 -> {
 						context.assertEquals(response2.statusCode(), 200);
 						context.assertEquals(response2.headers().get("content-type"), "application/json");
 						response2.bodyHandler(body2 -> {
@@ -155,9 +158,10 @@ public class ApiRouterTest {
 							context.assertTrue(jsonArray.getJsonObject(0).getJsonObject("data").equals(data));
 							async.complete();
 						});
-					}));
+					}).exceptionHandler(throwable -> context.asyncAssertFailure()).end());
 				})
 				.write(json)
+				.exceptionHandler(throwable -> context.asyncAssertFailure())
 				.end();
 	}
 }

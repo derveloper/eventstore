@@ -4,10 +4,8 @@ import eventstore.control.EventCacheVerticle;
 import eventstore.control.EventPersistenceVerticle;
 import eventstore.control.ReadEventsVerticle;
 import eventstore.control.WriteEventsVerticle;
-import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.net.NetClient;
 import io.vertx.ext.stomp.StompClient;
 import io.vertx.ext.stomp.StompClientConnection;
 import io.vertx.ext.stomp.StompClientOptions;
@@ -44,8 +42,8 @@ public class StompBridgeTest {
 		socket2.close();
 
 		deployBlocking(vertx, context, new JsonObject().put("stomp.port", port2), StompBridge.class.getName());
-		deployBlocking(vertx, context, new JsonObject(), EventPersistenceVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), EventCacheVerticle.class.getName());
+		deployBlocking(vertx, context, new JsonObject().put("stomp.port", port2), EventPersistenceVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), WriteEventsVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), ReadEventsVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject().put("http.port", port), ApiRouter.class.getName());
@@ -67,30 +65,36 @@ public class StompBridgeTest {
 		final Async async = context.async();
 		final String length = Integer.toString(json.length());
 		StompClient.create(vertx, new StompClientOptions()
-				.setHeartbeat(new JsonObject().put("x", 10000).put("y", 10000))
 				.setHost("localhost").setPort(port2)
 		)
 				.connect(ar -> {
 					if (ar.succeeded()) {
 						System.out.println("connected to STOMP");
 						StompClientConnection connection = ar.result();
-						connection.subscribe(testUrl(eventType)+"?eventType=" + eventType,
+						final String address = testUrl(eventType) + "?eventType=" + eventType;
+						System.out.println("subscribing to: " + address);
+						connection.subscribe(address,
 								frame -> {
 									System.out.println("Just received a frame from /queue : " + frame);
+									async.complete();
 									connection.disconnect();
 									connection.close();
 									context.asyncAssertSuccess();
-									async.complete();
 								});
+						try {
+							Thread.sleep(1200);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
 						vertx.createHttpClient().post(port, "localhost", testUrl(eventType))
 								.putHeader("content-type", "application/json")
 								.putHeader("content-length", length)
 								.handler(response -> {
 									context.assertEquals(response.statusCode(), 201);
 									context.assertTrue(response.headers().get("content-type").contains("application/json"));
-									async.complete();
 								})
 								.write(json)
+								.exceptionHandler(throwable -> context.asyncAssertFailure())
 								.end();
 					} else {
 						System.out.println("Failed to connect to the STOMP server: " + ar.cause().toString());

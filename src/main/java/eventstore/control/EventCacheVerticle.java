@@ -26,7 +26,7 @@ public class EventCacheVerticle extends AbstractVerticle {
 			logger.debug("consume read.cache.events: " + body.encodePrettily());
 			if(body.containsKey("id")) {
 				if(eventCache.containsKey(streamName) && eventCache.get(streamName).containsKey(body.getString("id"))) {
-					message.reply(new JsonArray().add(new JsonObject(Json.encode(eventCache.get(body.getString("id"))))));
+					message.reply(new JsonArray().add(new JsonObject(Json.encode(eventCache.get(streamName).get(body.getString("id"))))));
 				}
 				else {
 					message.fail(404, new JsonObject().put("error", "not found").encodePrettily());

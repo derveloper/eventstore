@@ -1,23 +1,19 @@
 package eventstore.boundary;
 
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.bridge.PermittedOptions;
-import io.vertx.ext.stomp.BridgeOptions;
+import io.vertx.ext.stomp.Destination;
 import io.vertx.ext.stomp.StompServer;
 import io.vertx.ext.stomp.StompServerHandler;
 
-import javax.print.attribute.URISyntax;
 import java.io.UnsupportedEncodingException;
-import java.net.*;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLDecoder;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 public class StompBridge extends AbstractVerticle {
@@ -30,24 +26,20 @@ public class StompBridge extends AbstractVerticle {
 		final Integer localPort = config().getInteger("stomp.port");
 		final StompServer stompServer = StompServer.create(vertx)
 				.handler(StompServerHandler.create(vertx)
-						.bridge(new BridgeOptions()
-								.addInboundPermitted(new PermittedOptions().setAddressRegex("^.*$"))
-								.addOutboundPermitted(new PermittedOptions().setAddressRegex("^.*$"))
-						)
-						.subscribeHandler(serverFrame -> {
+						.destinationFactory((v, s) -> {
 							try {
-								final URI uri = new URI(serverFrame.frame().getDestination());
-								final JsonObject query = new JsonObject(splitQuery(uri));
+								final URI uri = new URI(s.trim());
+								final JsonObject query = uri.toString().contains("?") ? new JsonObject(splitQuery(uri)) : new JsonObject();
 								final String[] split = uri.getPath().split("/");
 								if(split.length != 3) throw new URISyntaxException(uri.getPath(), "no stream specified");
 								query.put("streamName", split[2]);
-								query.put("address", uri.toString());
-								logger.debug(query.encodePrettily());
-								eventBus.publish("event.subscribe", query);
+								query.put("address", s.trim());
+								logger.debug("subscribing: " + query.encodePrettily());
+								eventBus.send("event.subscribe", query);
+								return Destination.topic(vertx, s.trim());
 							} catch (UnsupportedEncodingException | URISyntaxException e) {
-								logger.warn("invalid URI format", e);
-								serverFrame.frame().setBody(Buffer.buffer("invalid URI format"));
-								serverFrame.connection().close();
+								logger.error("invalid URI format", e);
+								return null;
 							}
 						})
 				)
