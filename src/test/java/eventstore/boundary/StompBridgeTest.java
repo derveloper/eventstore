@@ -94,6 +94,7 @@ public class StompBridgeTest {
 								.exceptionHandler(throwable -> context.asyncAssertFailure())
 								.end();
 					} else {
+						//noinspection ThrowableResultOfMethodCallIgnored
 						System.out.println("Failed to connect to the STOMP server: " + ar.cause().toString());
 						context.asyncAssertFailure();
 						async.complete();
