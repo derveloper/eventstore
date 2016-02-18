@@ -127,15 +127,14 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 					jsonObjects.forEach(entries -> {
 						final String address = (String) entries.remove("address");
 						entries.stream()
-								.filter(stringObjectEntry -> {
-									return body.containsKey(stringObjectEntry.getKey());
-								})
+								.filter(stringObjectEntry -> body.containsKey(stringObjectEntry.getKey()))
 								.findAny()
 								.ifPresent(stringObjectEntry1 -> {
 									logger.debug("publishing to: " + address);
 									final Frame frame = new Frame();
-									frame.setCommand(Frame.Command.MESSAGE);
+									frame.setCommand(Frame.Command.SEND);
 									frame.setDestination(address);
+									body.remove("_id");
 									frame.setBody(Buffer.buffer(body.encodePrettily()));
 									stompClientConnection.send(frame);
 								});

@@ -15,6 +15,7 @@ public class Helper {
 			}
 		});
 		async.awaitSuccess();
+		Thread.sleep(100);
 		System.out.println("deployed " + deployUnit);
 	}
 }

@@ -79,13 +79,7 @@ public class StompBridgeTest {
 									async.complete();
 									connection.disconnect();
 									connection.close();
-									context.asyncAssertSuccess();
 								});
-						try {
-							Thread.sleep(1200);
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
 						vertx.createHttpClient().post(port, "localhost", testUrl(eventType))
 								.putHeader("content-type", "application/json")
 								.putHeader("content-length", length)
