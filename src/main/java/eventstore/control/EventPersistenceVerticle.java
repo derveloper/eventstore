@@ -8,6 +8,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.mongo.FindOptions;
 import io.vertx.ext.mongo.MongoClient;
 
 import java.util.Collections;
@@ -29,6 +30,11 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 
 		eventBus.consumer("read.persisted.events", readPersistedEventsConsumer());
 		eventBus.consumer("write.store.events", writeStoreEventsConsumer());
+		eventBus.consumer("event.subscribe", message -> {
+			final JsonObject body = (JsonObject) message.body();
+			final String streamName = (String) body.remove("streamName");
+			final String address = (String) body.remove("address");
+		});
 	}
 
 	private Handler<Message<Object>> writeStoreEventsConsumer() {

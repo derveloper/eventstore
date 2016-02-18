@@ -74,7 +74,7 @@ public class StompBridgeTest {
 					if (ar.succeeded()) {
 						System.out.println("connected to STOMP");
 						StompClientConnection connection = ar.result();
-						connection.subscribe("write.store.events.persisted",
+						connection.subscribe(testUrl(eventType)+"?eventType=" + eventType,
 								frame -> {
 									System.out.println("Just received a frame from /queue : " + frame);
 									connection.disconnect();
