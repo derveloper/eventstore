@@ -30,9 +30,11 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 	@Override
 	public void start() throws Exception {
 		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
+		final String mongodbHosts = System.getProperty("EVENTSTORE_MONGODB_HOSTS", "mongodb://127.0.0.1:27017");
+		final String mongodbName = System.getProperty("EVENTSTORE_MONGODB_NAME", "eventstore");
 		final JsonObject config = new JsonObject()
-				.put("db_name", "eventstore")
-				.put("connection_string", "mongodb://127.0.0.1:27017");
+				.put("db_name", mongodbName)
+				.put("connection_string", mongodbHosts);
 		mongoClient = MongoClient.createShared(vertx, config);
 		eventBus = vertx.eventBus();
 

@@ -27,7 +27,9 @@ public class EventstoreMain {
 
 			vertx.deployVerticle(new StompBridge(), new DeploymentOptions().setConfig(new JsonObject().put("stomp.port", stompPort)));
 			vertx.deployVerticle(new EventCacheVerticle());
-			vertx.deployVerticle(new EventPersistenceVerticle(), new DeploymentOptions().setConfig(new JsonObject().put("stomp.port", stompPort)));
+			vertx.deployVerticle(new EventPersistenceVerticle(), new DeploymentOptions().setConfig(new JsonObject()
+					.put("stomp.port", stompPort)
+			));
 			vertx.deployVerticle(new WriteEventsVerticle());
 			vertx.deployVerticle(new ReadEventsVerticle());
 			vertx.deployVerticle(new ApiRouter(), new DeploymentOptions().setConfig(new JsonObject().put("http.port", httpPort)));
