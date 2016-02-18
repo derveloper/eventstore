@@ -5,6 +5,7 @@ import eventstore.control.EventPersistenceVerticle;
 import eventstore.control.ReadEventsVerticle;
 import eventstore.control.WriteEventsVerticle;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.stomp.StompClient;
 import io.vertx.ext.stomp.StompClientConnection;
@@ -75,7 +76,9 @@ public class StompBridgeTest {
 						System.out.println("subscribing to: " + address);
 						connection.subscribe(address,
 								frame -> {
-									System.out.println("Just received a frame from /queue : " + frame);
+									context.assertEquals(
+											new JsonObject(json).getJsonObject("data"),
+											new JsonObject(frame.getBodyAsString()).getJsonObject("data"));
 									async.complete();
 									connection.disconnect();
 									connection.close();

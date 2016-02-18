@@ -6,11 +6,11 @@ import java.util.Objects;
 import java.util.UUID;
 
 public class PersistedEvent implements Serializable {
-	private final String streamName;
-	private final String id;
-	private final String eventType;
-	private final Date createdAt;
-	private final Object data;
+	public final String streamName;
+	public final String id;
+	public final String eventType;
+	public final Date createdAt;
+	public final Object data;
 
 	public PersistedEvent(String streamName, String eventType, Object data) {
 		this.id = UUID.randomUUID().toString();

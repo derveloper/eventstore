@@ -17,7 +17,6 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
-import java.io.IOException;
 import java.util.Map;
 
 public class ApiRouter extends AbstractVerticle {
