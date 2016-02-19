@@ -1,10 +1,15 @@
 package eventstore.control;
 
+import com.rethinkdb.RethinkDB;
+import com.rethinkdb.model.MapObject;
+import com.rethinkdb.net.Connection;
+import com.rethinkdb.net.Cursor;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -15,28 +20,19 @@ import io.vertx.ext.stomp.StompClient;
 import io.vertx.ext.stomp.StompClientConnection;
 import io.vertx.ext.stomp.StompClientOptions;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class EventPersistenceVerticle extends AbstractVerticle {
 	private Logger logger;
 	private EventBus eventBus;
-	private MongoClient mongoClient;
 	private final Map<String, List<JsonObject>> subscriptions = new HashMap<>();
 	private StompClientConnection stompClientConnection;
+	public static final RethinkDB r = RethinkDB.r;
+	public static final String DBHOST = "172.17.0.2";
 
 	@Override
 	public void start() throws Exception {
 		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
-		final String mongodbHosts = System.getProperty("EVENTSTORE_MONGODB_HOSTS", "mongodb://127.0.0.1:27017");
-		final String mongodbName = System.getProperty("EVENTSTORE_MONGODB_NAME", "eventstore");
-		final JsonObject config = new JsonObject()
-				.put("waitQueueMultiple", 100)
-				.put("db_name", mongodbName)
-				.put("connection_string", mongodbHosts);
-		mongoClient = MongoClient.createShared(vertx, config);
 		eventBus = vertx.eventBus();
 
 		final Integer stompPort = config().getInteger("stomp.port");
@@ -63,6 +59,7 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 			}
 			subscriptions.get(streamName).add(body);
 		});
+		logger.info("Started verticle " + this.getClass().getName());
 	}
 
 	private Handler<Message<Object>> writeStoreEventsConsumer() {
@@ -79,17 +76,54 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 			body.remove("streamName");
 			logger.debug("consume read.persisted.events: " + body.encodePrettily());
 
-			mongoClient.find("events_" + streamName, body, listAsyncResult -> {
-				if (listAsyncResult.succeeded() && !listAsyncResult.result().isEmpty()) {
-					final JsonArray jsonArray = new JsonArray();
-					listAsyncResult.result().forEach(jsonArray::add);
-					message.reply(jsonArray);
-				} else if (listAsyncResult.succeeded()) {
-					message.fail(404, new JsonObject().put("error", "not found").encodePrettily());
-				} else {
-					@SuppressWarnings("ThrowableResultOfMethodCallIgnored") final String failMessage = listAsyncResult.cause().getMessage();
-					logger.error("failed reading from db: " + failMessage);
-					message.fail(500, new JsonObject().put("error", failMessage).encodePrettily());
+			vertx.executeBlocking(future -> {
+				Connection conn = null;
+
+				try {
+					conn = r.connection().hostname(DBHOST).connect();
+
+					r.db("eventstore").tableCreate(streamName).run(conn);
+
+					List<HashMap> items = r.db("eventstore").table("events_"+streamName)
+							.filter(row -> {
+								body.forEach(e -> row.g(e.getKey()).eq(e.getValue()));
+								return row;
+							})
+							.orderBy("createdAt")
+							.run(conn);
+
+					if(items.isEmpty()) {
+						message.fail(404, new JsonObject().put("error", "not found").encodePrettily());
+					}
+					else {
+						final JsonArray jsonArray = new JsonArray();
+						items.forEach(hashMap -> {
+							final JsonObject value = new JsonObject();
+							hashMap.forEach((o, o2) -> value.put((String)o, o2));
+							final JsonObject origData = value.getJsonObject("data").getJsonObject("map");
+							value.remove("data");
+							value.put("data", origData);
+							jsonArray.add(value);
+						});
+						future.complete(jsonArray);
+					}
+				}
+				catch (Exception e) {
+					logger.error("failed reading from db: " + e);
+					future.fail(e);
+				}
+				finally {
+					if(conn != null) {
+						conn.close();
+					}
+				}
+			}, res -> {
+				if(res.succeeded()) {
+					message.reply(res.result());
+				}
+				else {
+					//noinspection ThrowableResultOfMethodCallIgnored
+					message.fail(500, new JsonObject().put("error", res.cause().getMessage()).encodePrettily());
 				}
 			});
 		};
@@ -102,32 +136,64 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 			final String streamName = jsonObject.getString("streamName");
 			jsonObject.remove("streamName");
 			final String collectionName = "events_" + streamName;
-			mongoClient.find(collectionName, new JsonObject().put("id", id), findResult -> {
-				if (findResult.succeeded() && findResult.result().isEmpty()) {
+			Connection conn = null;
+
+			try {
+				conn = r.connection().hostname(DBHOST).connect();
+				r.db("eventstore").tableCreate(collectionName).run(conn);
+
+				Cursor items = r.db("eventstore").table(collectionName)
+						.filter(row -> row.g("id").eq(id))
+						.limit(1)
+						.run(conn);
+				if(items.toList().isEmpty()) {
 					saveToMongo(jsonObject, collectionName, streamName);
-				} else if (findResult.succeeded()) {
+				}
+				else {
 					eventBus.send("write.store.events.duplicated",
 							new JsonObject().put("message", "duplicated event id: " + id));
-				} else if (findResult.failed()) {
-					//noinspection ThrowableResultOfMethodCallIgnored,ThrowableResultOfMethodCallIgnored
-					eventBus.send("read.idempotent.store.events.failed",
-							new JsonObject().put("error", findResult.cause().getMessage()));
 				}
-			});
+			}
+			catch (Exception e) {
+				logger.error("read.idempotent.store.events.failed: ", e);
+				eventBus.send("read.idempotent.store.events.failed",
+						new JsonObject().put("error", e.getMessage()));
+			}
+			finally {
+				if(conn != null) {
+					conn.close();
+				}
+			}
 		});
 	}
 
 	private void saveToMongo(final JsonObject body, final String collectionName, final String streamName) {
 		logger.debug("writing to db: " + body.encodePrettily());
-		mongoClient.save(collectionName, body, saveResult -> {
-			if (saveResult.failed()) {
+		vertx.executeBlocking(future -> {
+			// Call some blocking API that takes a significant amount of time to return
+			Connection conn = null;
+
+			try {
+				conn = r.connection().hostname(DBHOST).connect();
+
+				final MapObject mapObject = r.hashMap();
+				body.forEach(o -> mapObject.with(o.getKey(), o.getValue()));
+				r.db("eventstore").table(collectionName).insert(mapObject).run(conn);
+				future.complete();
+			}
+			catch (Exception e) {
 				//noinspection ThrowableResultOfMethodCallIgnored,ThrowableResultOfMethodCallIgnored
-				logger.error("failed writing to db: " + saveResult.cause().getMessage());
-				//noinspection ThrowableResultOfMethodCallIgnored
-				eventBus.send("write.store.events.failed",
-						new JsonObject().put("error", saveResult.cause().getMessage()));
-			} else {
-				if (stompClientConnection != null && subscriptions.containsKey(streamName)) {
+				logger.error("failed writing to db: ", e);
+				future.fail(e);
+			}
+			finally {
+				if(conn != null) {
+					conn.close();
+				}
+			}
+		}, res -> {
+			if(res.succeeded()) {
+				if(subscriptions.containsKey(streamName)) {
 					final List<JsonObject> jsonObjects = subscriptions.get(streamName);
 					jsonObjects.forEach(entries -> {
 						final String address = (String) entries.remove("address");
@@ -145,6 +211,11 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 								});
 					});
 				}
+			}
+			else {
+				//noinspection ThrowableResultOfMethodCallIgnored
+				eventBus.send("write.store.events.failed",
+						new JsonObject().put("error", res.cause().getMessage()));
 			}
 		});
 	}
