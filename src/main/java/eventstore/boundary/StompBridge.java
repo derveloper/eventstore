@@ -19,12 +19,12 @@ import java.util.Map;
 public class StompBridge extends AbstractVerticle {
 	private Logger logger;
 
-	private static Map<String, Object> splitQuery(URI url) throws UnsupportedEncodingException {
-		Map<String, Object> query_pairs = new LinkedHashMap<>();
-		String query = url.getQuery();
-		String[] pairs = query.split("&");
-		for (String pair : pairs) {
-			int idx = pair.indexOf("=");
+	private static Map<String, Object> splitQuery(final URI url) throws UnsupportedEncodingException {
+		final Map<String, Object> query_pairs = new LinkedHashMap<>();
+		final String query = url.getQuery();
+		final String[] pairs = query.split("&");
+		for (final String pair : pairs) {
+			final int idx = pair.indexOf("=");
 			query_pairs.put(URLDecoder.decode(pair.substring(0, idx), "UTF-8"), URLDecoder.decode(pair.substring(idx + 1), "UTF-8"));
 		}
 		return query_pairs;

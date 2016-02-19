@@ -71,7 +71,7 @@ public class StompBridgeTest {
 				.connect(ar -> {
 					if (ar.succeeded()) {
 						System.out.println("connected to STOMP");
-						StompClientConnection connection = ar.result();
+						final StompClientConnection connection = ar.result();
 						final String address = testUrl(eventType) + "?eventType=" + eventType;
 						System.out.println("subscribing to: " + address);
 						connection.subscribe(address,
@@ -102,7 +102,7 @@ public class StompBridgeTest {
 				});
 	}
 
-	private String testUrl(String eventType) {
+	private String testUrl(final String eventType) {
 		return TEST_URL + eventType.split("-")[0];
 	}
 }

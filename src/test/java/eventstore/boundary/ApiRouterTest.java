@@ -125,7 +125,7 @@ public class ApiRouterTest {
 				.end();
 	}
 
-	private String testUrl(String eventType) {
+	private String testUrl(final String eventType) {
 		return TEST_URL + eventType.split("-")[0];
 	}
 

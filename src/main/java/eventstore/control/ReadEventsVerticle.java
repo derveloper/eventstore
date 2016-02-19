@@ -17,7 +17,7 @@ public class ReadEventsVerticle extends AbstractVerticle {
 		eventBus = vertx.eventBus();
 		eventBus.consumer("read.events", message -> {
 			logger.debug("consume read.events: " + ((JsonObject) message.body()).encodePrettily());
-			DeliveryOptions cacheDeliveryOptions = new DeliveryOptions()
+			final DeliveryOptions cacheDeliveryOptions = new DeliveryOptions()
 					.setSendTimeout(200);
 			eventBus.send("read.cache.events", message.body(), cacheDeliveryOptions, messageAsyncResult -> {
 				if (messageAsyncResult.succeeded()) {

@@ -49,7 +49,7 @@ public class ApiRouter extends AbstractVerticle {
 					requestBody = new JsonObject();
 				}
 
-				for (Map.Entry<String, String> entry : routingContext.request().params()) {
+				for (final Map.Entry<String, String> entry : routingContext.request().params()) {
 					requestBody.put(entry.getKey(), entry.getValue());
 				}
 

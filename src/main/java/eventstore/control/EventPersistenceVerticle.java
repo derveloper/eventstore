@@ -94,7 +94,7 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 		};
 	}
 
-	private void saveEventIfNotDuplicated(JsonArray body) {
+	private void saveEventIfNotDuplicated(final JsonArray body) {
 		body.forEach(o -> {
 			final JsonObject jsonObject = (JsonObject) o;
 			final String id = jsonObject.getString("id");
@@ -116,7 +116,7 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 		});
 	}
 
-	private void saveToMongo(JsonObject body, String collectionName, String streamName) {
+	private void saveToMongo(final JsonObject body, final String collectionName, final String streamName) {
 		logger.debug("writing to db: " + body.encodePrettily());
 		mongoClient.save(collectionName, body, saveResult -> {
 			if (saveResult.failed()) {
