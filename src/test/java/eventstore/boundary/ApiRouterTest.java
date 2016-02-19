@@ -1,5 +1,13 @@
 package eventstore.boundary;
 
+import de.flapdoodle.embed.mongo.MongodExecutable;
+import de.flapdoodle.embed.mongo.MongodProcess;
+import de.flapdoodle.embed.mongo.MongodStarter;
+import de.flapdoodle.embed.mongo.config.IMongodConfig;
+import de.flapdoodle.embed.mongo.config.MongodConfigBuilder;
+import de.flapdoodle.embed.mongo.config.Net;
+import de.flapdoodle.embed.mongo.distribution.Version;
+import de.flapdoodle.embed.process.runtime.Network;
 import eventstore.control.EventCacheVerticle;
 import eventstore.control.EventPersistenceVerticle;
 import eventstore.control.ReadEventsVerticle;
@@ -10,9 +18,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
@@ -27,6 +33,24 @@ public class ApiRouterTest {
 	private static final String TEST_URL = "/stream/test";
 	private Vertx vertx;
 	private int port;
+	private static MongodProcess MONGO;
+	private static int MONGO_PORT = 27018;
+
+	@BeforeClass
+	public static void initialize() throws IOException {
+		System.setProperty("EVENTSTORE_MONGODB_HOSTS", "mongodb://127.0.0.1:" + MONGO_PORT);
+		MongodStarter starter = MongodStarter.getDefaultInstance();
+		IMongodConfig mongodConfig = new MongodConfigBuilder()
+				.version(Version.Main.PRODUCTION)
+				.net(new Net(MONGO_PORT, Network.localhostIsIPv6()))
+				.build();
+		MongodExecutable mongodExecutable =
+				starter.prepare(mongodConfig);
+		MONGO = mongodExecutable.start();
+	}
+
+	@AfterClass
+	public static void shutdown() {  MONGO.stop(); }
 
 	@Before
 	public void setUp(final TestContext context) throws IOException, InterruptedException {

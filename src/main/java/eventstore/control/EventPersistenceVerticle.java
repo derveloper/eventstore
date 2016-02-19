@@ -33,6 +33,7 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 		final String mongodbHosts = System.getProperty("EVENTSTORE_MONGODB_HOSTS", "mongodb://127.0.0.1:27017");
 		final String mongodbName = System.getProperty("EVENTSTORE_MONGODB_NAME", "eventstore");
 		final JsonObject config = new JsonObject()
+				.put("waitQueueMultiple", 100)
 				.put("db_name", mongodbName)
 				.put("connection_string", mongodbHosts);
 		mongoClient = MongoClient.createShared(vertx, config);
