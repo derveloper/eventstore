@@ -3,6 +3,7 @@ package eventstore.control;
 import com.rethinkdb.RethinkDB;
 import com.rethinkdb.model.MapObject;
 import com.rethinkdb.net.Connection;
+import eventstore.util.RethinkUtils;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
@@ -16,14 +17,13 @@ import java.util.HashMap;
 import java.util.List;
 
 public class EventPersistenceVerticle extends AbstractVerticle {
-	public static final RethinkDB r = RethinkDB.r;
-	public static final String DBHOST = System.getenv("EVENTSTORE_RETHINKDB_ADDRESS") == null ? "localhost" : System.getenv("EVENTSTORE_RETHINKDB_ADDRESS");
+	private static final RethinkDB r = RethinkDB.r;
+	private static final String DBHOST = System.getenv("EVENTSTORE_RETHINKDB_ADDRESS") == null ? "localhost" : System.getenv("EVENTSTORE_RETHINKDB_ADDRESS");
 	private Logger logger;
 	private EventBus eventBus;
 
 	@Override
 	public void start() throws Exception {
-		;
 		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
 		eventBus = vertx.eventBus();
 
@@ -53,8 +53,7 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 				try {
 					conn = r.connection().hostname(DBHOST).connect();
 					logger.debug("fetching with query " + body.encode());
-					final MapObject mapObject = r.hashMap();
-					body.forEach(o -> mapObject.with(o.getKey(), o.getValue()));
+					final MapObject mapObject = RethinkUtils.getMapObjectFromJson(body);
 					final List<HashMap<String, Object>> items = r.db("eventstore").table("events")
 							.filter(mapObject)
 							.orderBy("createdAt")
@@ -104,12 +103,12 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 					final String collectionName = "events";
 					saveToMongo(jsonObject, collectionName, finalConn);
 				});
-				if(!future.isComplete() && !future.succeeded() && !future.failed()) {
+				if (!future.isComplete() && !future.succeeded() && !future.failed()) {
 					future.complete();
 				}
 			} catch (final Exception e) {
 				logger.error("read.idempotent.store.events.failed: ", e);
-				if(!future.isComplete() && !future.succeeded() && !future.failed()) {
+				if (!future.isComplete() && !future.succeeded() && !future.failed()) {
 					future.fail(e);
 				}
 			} finally {
@@ -117,6 +116,7 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 			}
 		}, ar -> {
 			if (ar.failed()) {
+				//noinspection ThrowableResultOfMethodCallIgnored
 				eventBus.send("read.idempotent.store.events.failed",
 						new JsonObject().put("error", ar.cause().getMessage()));
 			}
@@ -128,22 +128,20 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 
 		boolean reconnected = false;
 		try {
-			if(!finalConn.isOpen()) {
-				logger.debug("lost connectin, reopening");
+			if (!finalConn.isOpen()) {
+				logger.debug("lost connection, reopening");
 				finalConn = r.connection().hostname(DBHOST).connect();
 				reconnected = true;
 			}
-			final MapObject mapObject = r.hashMap();
-			body.forEach(o -> mapObject.with(o.getKey(), o.getValue()));
+			final MapObject mapObject = RethinkUtils.getMapObjectFromJson(body);
 			r.db("eventstore").table(collectionName).insert(mapObject).run(finalConn);
 			logger.debug("wrote " + body.encode() + " to DB.");
 		} catch (final Exception e) {
 			logger.error("failed writing to db: ", e);
 			eventBus.send("write.store.events.failed",
 					new JsonObject().put("error", e.getMessage()));
-		}
-		finally {
-			if(finalConn != null && finalConn.isOpen() && reconnected) {
+		} finally {
+			if (finalConn != null && finalConn.isOpen() && reconnected) {
 				finalConn.close();
 			}
 		}

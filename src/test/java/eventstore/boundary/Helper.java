@@ -6,7 +6,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 
-public class Helper {
+class Helper {
 	public static void deployBlocking(final Vertx vertx, final TestContext context, final JsonObject stompConfig, final String deployUnit) throws InterruptedException {
 		final Async async = context.async();
 		vertx.deployVerticle(deployUnit, new DeploymentOptions().setConfig(stompConfig), stringAsyncResult -> {

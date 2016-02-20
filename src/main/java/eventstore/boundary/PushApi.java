@@ -3,6 +3,7 @@ package eventstore.boundary;
 import com.rethinkdb.model.MapObject;
 import com.rethinkdb.net.Connection;
 import com.rethinkdb.net.Cursor;
+import eventstore.util.RethinkUtils;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
@@ -20,7 +21,7 @@ import java.util.HashMap;
 import static com.rethinkdb.RethinkDB.r;
 
 public class PushApi extends AbstractVerticle {
-	public static final String DBHOST = System.getenv("EVENTSTORE_RETHINKDB_ADDRESS") == null ? "localhost" : System.getenv("EVENTSTORE_RETHINKDB_ADDRESS");
+	private static final String DBHOST = System.getenv("EVENTSTORE_RETHINKDB_ADDRESS") == null ? "localhost" : System.getenv("EVENTSTORE_RETHINKDB_ADDRESS");
 	private Logger logger;
 	private StompClientConnection stompClientConnection;
 
@@ -55,8 +56,7 @@ public class PushApi extends AbstractVerticle {
 				Connection conn = null;
 				try {
 					conn = r.connection().hostname(DBHOST).connect();
-					final MapObject mapObject = r.hashMap();
-					body.forEach(o -> mapObject.with(o.getKey(), o.getValue()));
+					final MapObject mapObject = RethinkUtils.getMapObjectFromJson(body);
 					final Cursor<HashMap<String, Object>> cur = r.db("eventstore").table("events")
 							.filter(mapObject)
 							.changes()
@@ -64,7 +64,7 @@ public class PushApi extends AbstractVerticle {
 					logger.debug("created changefeed for " + mapObject);
 					while (cur.hasNext()) {
 						try {
-							if(conn.isOpen()) {
+							if (conn.isOpen()) {
 								final HashMap<String, Object> next = cur.next();
 								final Frame frame = new Frame();
 								frame.setCommand(Frame.Command.SEND);
@@ -76,8 +76,7 @@ public class PushApi extends AbstractVerticle {
 								stompClientConnection.send(frame);
 								logger.debug("publishing to: " + frame);
 							}
-						}
-						catch (Exception e) {
+						} catch (Exception e) {
 							fut.fail(e);
 						}
 					}

@@ -14,7 +14,7 @@ Currently, there are two APIs: HTTP and STOMP.
 
 Write events by posting them via HTTP.
 ```
-curl -v -d '[{"id": "testid123", "eventType": "barfoo", "data": { "foo": "bar" } }]' loclahost:8080/stream/testbar1234
+curl -v -d '[{"id": "testid123", "eventType": "barfoo", "data": { "foo": "bar" } }]' localhost:8080/stream/testbar1234
 ```
 
 #### Fetching events
@@ -22,7 +22,7 @@ curl -v -d '[{"id": "testid123", "eventType": "barfoo", "data": { "foo": "bar" }
 Fetch events using a `GET` HTTP request.
 You can pass query arguments to the URL for filtering.
 ```
-curl "http://localhost/stream/testbar1234?eventType=barfoo"
+curl "http://localhost:8080/stream/testbar1234?eventType=barfoo"
 ```
 
 ### STOMP

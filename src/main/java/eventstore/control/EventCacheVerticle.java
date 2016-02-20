@@ -53,9 +53,7 @@ public class EventCacheVerticle extends AbstractVerticle {
 				final JsonObject object = (JsonObject) o;
 				final String streamName = (String) object.remove("streamName");
 				final String id = object.getString("id");
-				if (!eventCache.containsKey(streamName)) {
-					eventCache.put(streamName, new LinkedHashMap<>());
-				}
+				eventCache.putIfAbsent(streamName, new LinkedHashMap<>());
 				if (!eventCache.get(streamName).containsKey(id)) {
 					eventCache.get(streamName).put(id, object);
 				}
@@ -64,9 +62,7 @@ public class EventCacheVerticle extends AbstractVerticle {
 			final JsonObject body = (JsonObject) body1;
 			final String id = body.getString("id");
 			final String streamName = (String) body.remove("streamName");
-			if (!eventCache.containsKey(streamName)) {
-				eventCache.put(streamName, new LinkedHashMap<>());
-			}
+			eventCache.putIfAbsent(streamName, new LinkedHashMap<>());
 			if (!eventCache.containsKey(id)) {
 				eventCache.get(streamName).put(id, body);
 			}

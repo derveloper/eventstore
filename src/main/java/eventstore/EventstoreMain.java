@@ -14,7 +14,7 @@ import io.vertx.core.json.JsonObject;
 import java.io.IOException;
 import java.net.ServerSocket;
 
-public class EventstoreMain {
+class EventstoreMain {
 	public static void main(final String[] args) {
 		final Vertx vertx = Vertx.vertx();
 		try {
