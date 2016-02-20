@@ -104,10 +104,14 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 					final String collectionName = "events";
 					saveToMongo(jsonObject, collectionName, finalConn);
 				});
-				future.complete();
+				if(!future.isComplete() && !future.succeeded() && !future.failed()) {
+					future.complete();
+				}
 			} catch (final Exception e) {
 				logger.error("read.idempotent.store.events.failed: ", e);
-				future.fail(e);
+				if(!future.isComplete() && !future.succeeded() && !future.failed()) {
+					future.fail(e);
+				}
 			} finally {
 				if (conn != null && conn.isOpen()) conn.close();
 			}
@@ -119,10 +123,16 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 		});
 	}
 
-	private void saveToMongo(final JsonObject body, final String collectionName, final Connection finalConn) {
+	private void saveToMongo(final JsonObject body, final String collectionName, Connection finalConn) {
 		logger.debug("writing to db: " + body.encodePrettily());
 
+		boolean reconnected = false;
 		try {
+			if(!finalConn.isOpen()) {
+				logger.debug("lost connectin, reopening");
+				finalConn = r.connection().hostname(DBHOST).connect();
+				reconnected = true;
+			}
 			final MapObject mapObject = r.hashMap();
 			body.forEach(o -> mapObject.with(o.getKey(), o.getValue()));
 			r.db("eventstore").table(collectionName).insert(mapObject).run(finalConn);
@@ -131,6 +141,11 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 			logger.error("failed writing to db: ", e);
 			eventBus.send("write.store.events.failed",
 					new JsonObject().put("error", e.getMessage()));
+		}
+		finally {
+			if(finalConn != null && finalConn.isOpen() && reconnected) {
+				finalConn.close();
+			}
 		}
 	}
 }
