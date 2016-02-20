@@ -17,14 +17,17 @@ import java.util.List;
 
 public class EventPersistenceVerticle extends AbstractVerticle {
 	public static final RethinkDB r = RethinkDB.r;
-	public static final String DBHOST = "172.17.0.2";
+	public static final String DBHOST = System.getenv("EVENTSTORE_RETHINKDB_ADDRESS") == null ? "localhost" : System.getenv("EVENTSTORE_RETHINKDB_ADDRESS");
 	private Logger logger;
 	private EventBus eventBus;
 
 	@Override
 	public void start() throws Exception {
+		;
 		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
 		eventBus = vertx.eventBus();
+
+		logger.info("connecting to rethink on " + DBHOST);
 
 		eventBus.consumer("read.persisted.events", readPersistedEventsConsumer());
 		eventBus.consumer("write.store.events", writeStoreEventsConsumer());

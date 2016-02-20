@@ -20,7 +20,7 @@ import java.util.HashMap;
 import static com.rethinkdb.RethinkDB.r;
 
 public class PushApi extends AbstractVerticle {
-	public static final String DBHOST = "172.17.0.2";
+	public static final String DBHOST = System.getenv("EVENTSTORE_RETHINKDB_ADDRESS") == null ? "localhost" : System.getenv("EVENTSTORE_RETHINKDB_ADDRESS");
 	private Logger logger;
 	private StompClientConnection stompClientConnection;
 
@@ -28,6 +28,8 @@ public class PushApi extends AbstractVerticle {
 	public void start() throws Exception {
 		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
 		final EventBus eventBus = vertx.eventBus();
+
+		logger.info("connecting to rethink on " + DBHOST);
 
 		final Integer stompPort = config().getInteger("stomp.port");
 		if (stompPort != null) {
