@@ -19,8 +19,8 @@ import java.util.HashMap;
 import static com.rethinkdb.RethinkDB.r;
 
 public class PushApi extends AbstractVerticle {
-	private Logger logger;
 	public static final String DBHOST = "172.17.0.2";
+	private Logger logger;
 	private StompClientConnection stompClientConnection;
 
 	@Override
@@ -50,7 +50,7 @@ public class PushApi extends AbstractVerticle {
 				Connection conn = null;
 				try {
 					conn = r.connection().hostname(DBHOST).connect();
-					Cursor<HashMap<String, Object>> cur = r.db("eventstore").table("events")
+					final Cursor<HashMap<String, Object>> cur = r.db("eventstore").table("events")
 							.changes()
 							.filter(row -> {
 								body.forEach(e -> row.g(e.getKey()).eq(e.getValue()));
@@ -68,16 +68,15 @@ public class PushApi extends AbstractVerticle {
 						stompClientConnection.send(frame);
 						logger.debug("publishing to: " + frame);
 					}
-				} catch (Exception e) {
+				} catch (final Exception e) {
 					//fut.fail(e);
 				} finally {
-					if(conn != null && conn.isOpen()) conn.close();
+					if (conn != null && conn.isOpen()) conn.close();
 				}
 			}, ar -> {
-				if(ar.failed()) {
+				if (ar.failed()) {
 					logger.error("Error: changefeed failed", ar.cause());
-				}
-				else {
+				} else {
 					logger.info("got update!");
 				}
 			});

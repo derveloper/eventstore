@@ -23,7 +23,7 @@ public class EventstoreMain {
 			socket2.close();
 
 			vertx.deployVerticle(new StompBridge(), new DeploymentOptions().setConfig(new JsonObject().put("stomp.port", stompPort)), ar -> {
-				if(ar.succeeded()) {
+				if (ar.succeeded()) {
 					vertx.deployVerticle(new PushApi(), new DeploymentOptions().setConfig(new JsonObject().put("stomp.port", stompPort)).setWorker(true));
 					vertx.deployVerticle(new EventCacheVerticle());
 					vertx.deployVerticle(new EventPersistenceVerticle(), new DeploymentOptions().setConfig(new JsonObject()

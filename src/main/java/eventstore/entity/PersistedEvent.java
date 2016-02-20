@@ -12,7 +12,7 @@ public class PersistedEvent implements Serializable {
 	public final Date createdAt;
 	public final Object data;
 
-	public PersistedEvent(String id, final String streamName, final String eventType, final Object data) {
+	public PersistedEvent(final String id, final String streamName, final String eventType, final Object data) {
 		this.id = id == null ? UUID.randomUUID().toString() : id;
 		this.streamName = streamName;
 		this.createdAt = new Date();
