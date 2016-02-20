@@ -85,16 +85,20 @@ public class ApiRouter extends AbstractVerticle {
 				if (bodyAsString.trim().startsWith("[")) {
 					routingContext.getBodyAsJsonArray().forEach(o -> {
 						final JsonObject jsonObject = (JsonObject) o;
-						events.add(new JsonObject(Json.encode(new PersistedEvent(
+						final PersistedEvent persistedEvent = new PersistedEvent(
+								jsonObject.getString("id"),
 								streamName,
 								jsonObject.getString("eventType", "undefined"),
-								jsonObject.getJsonObject("data", new JsonObject())))));
+								jsonObject.getJsonObject("data", new JsonObject()));
+						events.add(new JsonObject(Json.encode(persistedEvent)));
 					});
 				} else {
-					events.add(new JsonObject(Json.encode(new PersistedEvent(
+					final PersistedEvent persistedEvent = new PersistedEvent(
+							routingContext.getBodyAsJson().getString("id"),
 							streamName,
 							routingContext.getBodyAsJson().getString("eventType", "undefined"),
-							routingContext.getBodyAsJson().getJsonObject("data", new JsonObject())))));
+							routingContext.getBodyAsJson().getJsonObject("data", new JsonObject()));
+					events.add(new JsonObject(Json.encode(persistedEvent)));
 				}
 
 				eventBus.publish(address, events);
@@ -102,7 +106,7 @@ public class ApiRouter extends AbstractVerticle {
 				final int statusCode = HttpMethod.POST.equals(routingContext.request().method())
 						? HttpResponseStatus.CREATED.code()
 						: HttpResponseStatus.NO_CONTENT.code();
-				events.forEach(o -> ((JsonObject) o).remove("streamName"));
+
 				final String responseBody = events.encodePrettily();
 				logger.debug("http optimistic response: " + responseBody);
 				routingContext.response().setStatusCode(statusCode).end(responseBody);

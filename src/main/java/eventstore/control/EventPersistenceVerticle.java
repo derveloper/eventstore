@@ -50,11 +50,11 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 
 				try {
 					conn = r.connection().hostname(DBHOST).connect();
+					logger.debug("fetching with query " + body.encode());
+					final MapObject mapObject = r.hashMap();
+					body.forEach(o -> mapObject.with(o.getKey(), o.getValue()));
 					List<HashMap<String, Object>> items = r.db("eventstore").table("events")
-							.filter(row -> {
-								body.forEach(e -> row.g(e.getKey()).eq(e.getValue()));
-								return row;
-							})
+							.filter(mapObject)
 							.orderBy("createdAt")
 							.run(conn);
 
@@ -99,18 +99,9 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 				final Connection finalConn = conn;
 				body.forEach(o -> {
 					final JsonObject jsonObject = (JsonObject) o;
-					final String id = jsonObject.getString("id");
+					// final String id = jsonObject.getString("id");
 					final String collectionName = "events";
-					Cursor items = r.db("eventstore").table(collectionName)
-							.filter(row -> row.g("id").eq(id))
-							.limit(1)
-							.run(finalConn);
-					if (items.toList().isEmpty()) {
-						saveToMongo(jsonObject, collectionName, finalConn);
-					} else {
-						eventBus.send("write.store.events.duplicated",
-								new JsonObject().put("message", "duplicated event id: " + id));
-					}
+					saveToMongo(jsonObject, collectionName, finalConn);
 				});
 				future.complete();
 			} catch (Exception e) {
@@ -133,8 +124,8 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 		try {
 			final MapObject mapObject = r.hashMap();
 			body.forEach(o -> mapObject.with(o.getKey(), o.getValue()));
-
 			r.db("eventstore").table(collectionName).insert(mapObject).run(finalConn);
+			logger.debug("wrote " + body.encode() + " to DB.");
 		} catch (Exception e) {
 			logger.error("failed writing to db: ", e);
 			eventBus.send("write.store.events.failed",
