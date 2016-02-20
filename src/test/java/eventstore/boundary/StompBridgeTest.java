@@ -85,16 +85,24 @@ public class StompBridgeTest {
 									connection.disconnect();
 									connection.close();
 								});
-						vertx.createHttpClient().post(port, "localhost", testUrl(eventType))
-								.putHeader("content-type", "application/json")
-								.putHeader("content-length", length)
-								.handler(response -> {
-									context.assertEquals(response.statusCode(), 201);
-									context.assertTrue(response.headers().get("content-type").contains("application/json"));
-								})
-								.write(json)
-								.exceptionHandler(throwable -> context.asyncAssertFailure())
-								.end();
+						vertx.executeBlocking(fut -> {
+							try {
+								Thread.sleep(2000);
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
+							vertx.createHttpClient().post(port, "localhost", testUrl(eventType))
+									.putHeader("content-type", "application/json")
+									.putHeader("content-length", length)
+									.handler(response -> {
+										context.assertEquals(response.statusCode(), 201);
+										context.assertTrue(response.headers().get("content-type").contains("application/json"));
+										fut.complete();
+									})
+									.write(json)
+									.exceptionHandler(throwable -> context.asyncAssertFailure())
+									.end();
+						}, ar2 -> System.out.println("posted"));
 					} else {
 						//noinspection ThrowableResultOfMethodCallIgnored
 						System.out.println("Failed to connect to the STOMP server: " + ar.cause().toString());

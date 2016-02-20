@@ -1,5 +1,6 @@
 package eventstore.boundary;
 
+import com.rethinkdb.model.MapObject;
 import com.rethinkdb.net.Connection;
 import com.rethinkdb.net.Cursor;
 import io.vertx.core.AbstractVerticle;
@@ -44,40 +45,51 @@ public class PushApi extends AbstractVerticle {
 
 		eventBus.consumer("event.subscribe", message -> {
 			final JsonObject body = (JsonObject) message.body();
-
 			final String address = (String) body.remove("address");
+
+			logger.debug("creating changefeed for: " + address + " with body " + body.encode());
+
 			vertx.executeBlocking(fut -> {
 				Connection conn = null;
 				try {
 					conn = r.connection().hostname(DBHOST).connect();
+					final MapObject mapObject = r.hashMap();
+					body.forEach(o -> mapObject.with(o.getKey(), o.getValue()));
 					final Cursor<HashMap<String, Object>> cur = r.db("eventstore").table("events")
+							.filter(mapObject)
 							.changes()
-							.filter(row -> {
-								body.forEach(e -> row.g(e.getKey()).eq(e.getValue()));
-								return row;
-							})
 							.run(conn);
+					logger.debug("created changefeed for " + mapObject);
 					while (cur.hasNext()) {
-						final Frame frame = new Frame();
-						frame.setCommand(Frame.Command.SEND);
-						frame.setDestination(address);
-						final JsonObject newVal = new JsonObject(Json.encode(cur.next().get("new_val")));
-						final JsonObject data = newVal.getJsonObject("data");
-						newVal.put("data", data.getJsonObject("map"));
-						frame.setBody(Buffer.buffer(newVal.encodePrettily()));
-						stompClientConnection.send(frame);
-						logger.debug("publishing to: " + frame);
+						try {
+							if(conn.isOpen()) {
+								final HashMap<String, Object> next = cur.next();
+								final Frame frame = new Frame();
+								frame.setCommand(Frame.Command.SEND);
+								frame.setDestination(address);
+								final JsonObject newVal = new JsonObject(Json.encode(next.get("new_val")));
+								final JsonObject data = newVal.getJsonObject("data");
+								newVal.put("data", data.getJsonObject("map"));
+								frame.setBody(Buffer.buffer(newVal.encodePrettily()));
+								stompClientConnection.send(frame);
+								logger.debug("publishing to: " + frame);
+							}
+						}
+						catch (Exception e) {
+							fut.fail(e);
+						}
 					}
+					fut.complete();
 				} catch (final Exception e) {
-					//fut.fail(e);
+					fut.fail(e);
 				} finally {
 					if (conn != null && conn.isOpen()) conn.close();
 				}
 			}, ar -> {
 				if (ar.failed()) {
-					logger.error("Error: changefeed failed", ar.cause());
+					logger.error("changefeed failed", ar.cause());
 				} else {
-					logger.info("got update!");
+					logger.debug("got update!");
 				}
 			});
 		});

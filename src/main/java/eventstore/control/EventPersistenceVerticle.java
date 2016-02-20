@@ -98,7 +98,6 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 				final Connection finalConn = conn;
 				body.forEach(o -> {
 					final JsonObject jsonObject = (JsonObject) o;
-					// final String id = jsonObject.getString("id");
 					final String collectionName = "events";
 					saveToMongo(jsonObject, collectionName, finalConn);
 				});
