@@ -4,6 +4,7 @@ import eventstore.control.EventCacheVerticle;
 import eventstore.control.EventPersistenceVerticle;
 import eventstore.control.ReadEventsVerticle;
 import eventstore.control.WriteEventsVerticle;
+import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.stomp.StompClient;
@@ -42,6 +43,7 @@ public class StompBridgeTest {
 		socket2.close();
 
 		deployBlocking(vertx, context, new JsonObject().put("stomp.port", port2), StompBridge.class.getName());
+		deployBlocking(vertx, context, new DeploymentOptions().setConfig(new JsonObject().put("stomp.port", port2)).setWorker(true), PushApi.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), EventCacheVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject().put("stomp.port", port2), EventPersistenceVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), WriteEventsVerticle.class.getName());
@@ -65,6 +67,7 @@ public class StompBridgeTest {
 		final Async async = context.async();
 		final String length = Integer.toString(json.length());
 		StompClient.create(vertx, new StompClientOptions()
+				.setHeartbeat(new JsonObject().put("x", 2000).put("y", 2000))
 				.setHost("localhost").setPort(port2)
 		)
 				.connect(ar -> {

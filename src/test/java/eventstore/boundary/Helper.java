@@ -18,4 +18,8 @@ public class Helper {
 		Thread.sleep(100);
 		System.out.println("deployed " + deployUnit);
 	}
+
+	public static void deployBlocking(final Vertx vertx, final TestContext context, final DeploymentOptions stompConfig, final String deployUnit) throws InterruptedException {
+		deployBlocking(vertx, context, stompConfig.getConfig(), deployUnit);
+	}
 }
