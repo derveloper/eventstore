@@ -87,7 +87,7 @@ public class StompBridgeTest {
 								});
 						vertx.executeBlocking(fut -> {
 							try {
-								Thread.sleep(2000);
+								Thread.sleep(1000);
 							} catch (InterruptedException e) {
 								e.printStackTrace();
 							}
