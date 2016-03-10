@@ -1,9 +1,6 @@
 package eventstore.boundary;
 
-import eventstore.control.EventCacheVerticle;
-import eventstore.control.RethinkDBEventPersistenceVerticle;
-import eventstore.control.ReadEventsVerticle;
-import eventstore.control.WriteEventsVerticle;
+import eventstore.control.*;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -45,7 +42,7 @@ public class StompBridgeTest {
 		deployBlocking(vertx, context, new JsonObject().put("stomp.port", port2), StompBridge.class.getName());
 		deployBlocking(vertx, context, new DeploymentOptions().setConfig(new JsonObject().put("stomp.port", port2)).setWorker(true), PushApi.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), EventCacheVerticle.class.getName());
-		deployBlocking(vertx, context, new JsonObject().put("stomp.port", port2), RethinkDBEventPersistenceVerticle.class.getName());
+		deployBlocking(vertx, context, new JsonObject(), InMemoryEventPersistenceVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), WriteEventsVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), ReadEventsVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject().put("http.port", port), ApiRouter.class.getName());

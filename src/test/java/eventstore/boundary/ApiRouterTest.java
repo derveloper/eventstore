@@ -1,9 +1,6 @@
 package eventstore.boundary;
 
-import eventstore.control.EventCacheVerticle;
-import eventstore.control.RethinkDBEventPersistenceVerticle;
-import eventstore.control.ReadEventsVerticle;
-import eventstore.control.WriteEventsVerticle;
+import eventstore.control.*;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -35,7 +32,7 @@ public class ApiRouterTest {
 		port = socket.getLocalPort();
 		socket.close();
 
-		deployBlocking(vertx, context, new JsonObject(), RethinkDBEventPersistenceVerticle.class.getName());
+		deployBlocking(vertx, context, new JsonObject(), InMemoryEventPersistenceVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), EventCacheVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), WriteEventsVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), ReadEventsVerticle.class.getName());

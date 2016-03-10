@@ -24,9 +24,7 @@ class EventstoreMain {
 					vertx.deployVerticle(new PushApi(), new DeploymentOptions().setConfig(new JsonObject().put("stomp.port", stompPort)).setWorker(true));
 					vertx.deployVerticle(new EventCacheVerticle());
 					vertx.deployVerticle(new InMemoryEventPersistenceVerticle());
-					/*vertx.deployVerticle(new RethinkDBEventPersistenceVerticle(), new DeploymentOptions().setConfig(new JsonObject()
-							.put("stomp.port", stompPort)
-					));*/
+					/*vertx.deployVerticle(new RethinkDBEventPersistenceVerticle());*/
 					vertx.deployVerticle(new WriteEventsVerticle());
 					vertx.deployVerticle(new ReadEventsVerticle());
 					vertx.deployVerticle(new ApiRouter());
