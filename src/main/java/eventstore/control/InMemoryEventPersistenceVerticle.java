@@ -51,6 +51,11 @@ public class InMemoryEventPersistenceVerticle extends AbstractEventPersistenceVe
 	protected void saveEventIfNotDuplicated(final JsonArray body) {
 		//noinspection unchecked
 		store.addAll(body.getList());
+		logger.debug("persisted " + body.encodePrettily());
+		if(!body.isEmpty()) {
+			JsonObject first = body.getJsonObject(0);
+			eventBus.publish("/stream/"+first.getString("streamName")+"?eventType="+first.getString("eventType"), body);
+		}
 	}
 
 	@Override

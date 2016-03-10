@@ -3,6 +3,7 @@ package eventstore.boundary;
 import eventstore.control.*;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.stomp.StompClient;
 import io.vertx.ext.stomp.StompClientConnection;
@@ -78,7 +79,7 @@ public class StompBridgeTest {
 									System.out.println("received frame: " + frame);
 									context.assertEquals(
 											new JsonObject(json).getJsonObject("data"),
-											new JsonObject(frame.getBodyAsString()).getJsonObject("data"));
+											new JsonArray(frame.getBodyAsString()).getJsonObject(0).getJsonObject("data"));
 									async.complete();
 									connection.disconnect();
 									connection.close();

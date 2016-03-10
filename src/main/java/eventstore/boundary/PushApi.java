@@ -36,7 +36,7 @@ public class PushApi extends AbstractVerticle {
 				final Frame frame = new Frame();
 				frame.setCommand(Frame.Command.SEND);
 				frame.setDestination(address);
-				frame.setBody(Buffer.buffer(((JsonArray) objectMessage).encodePrettily()));
+				frame.setBody(Buffer.buffer(((JsonArray) objectMessage.body()).encodePrettily()));
 				stompClientConnection.send(frame);
 				logger.debug("publishing to: " + frame);
 			});
