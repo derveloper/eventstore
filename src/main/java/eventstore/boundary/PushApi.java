@@ -34,25 +34,17 @@ public class PushApi extends AbstractVerticle {
 
 		final Integer stompPort = config().getInteger("stomp.port");
 		if (stompPort != null) {
-			StompClient.create(vertx, new StompClientOptions()
-					.setHost("0.0.0.0").setPort(stompPort)
-			).connect(ar -> {
-				if (ar.succeeded()) {
-					logger.debug("connected to STOMP");
-					stompClientConnection = ar.result();
-				} else {
-					logger.warn("could not connect to STOMP", ar.cause());
-				}
-			});
+			createStompClient(stompPort);
 		}
 
 		eventBus.consumer("event.subscribe", message -> {
-			final JsonObject body = (JsonObject) message.body();
-			final String address = (String) body.remove("address");
-
-			logger.debug("creating changefeed for: " + address + " with body " + body.encode());
-
+			logger.debug("subscribing" + message.body());
 			vertx.executeBlocking(fut -> {
+				final JsonObject body = (JsonObject) message.body();
+				final String address = (String) body.remove("address");
+
+				logger.debug("creating changefeed for: " + address + " with body " + body.encode());
+
 				Connection conn = null;
 				try {
 					conn = r.connection().hostname(DBHOST).connect();
@@ -93,6 +85,33 @@ public class PushApi extends AbstractVerticle {
 					logger.debug("got update!");
 				}
 			});
+		});
+	}
+
+	private void createStompClient(Integer stompPort) {
+		StompClient.create(vertx, new StompClientOptions()
+				.setHeartbeat(new JsonObject().put("x", 1000).put("y", 0))
+				.setHost("0.0.0.0").setPort(stompPort)
+		).connect(ar -> {
+			if (ar.succeeded()) {
+				logger.debug("connected to STOMP");
+				stompClientConnection = ar.result();
+				stompClientConnection.pingHandler(stompClientConnection -> {
+					logger.debug("ping from STOMP");
+				});
+				stompClientConnection.connectionDroppedHandler(stompClientConnection -> {
+					logger.debug("connection dropped");
+				});
+				stompClientConnection.errorHandler(stompClientConnection -> {
+					logger.debug("connection error");
+				});
+				stompClientConnection.closeHandler(stompClientConnection -> {
+					logger.debug("connection close");
+					createStompClient(stompPort);
+				});
+			} else {
+				logger.warn("could not connect to STOMP", ar.cause());
+			}
 		});
 	}
 }

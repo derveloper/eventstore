@@ -3,10 +3,7 @@ package eventstore;
 import eventstore.boundary.ApiRouter;
 import eventstore.boundary.PushApi;
 import eventstore.boundary.StompBridge;
-import eventstore.control.EventCacheVerticle;
-import eventstore.control.EventPersistenceVerticle;
-import eventstore.control.ReadEventsVerticle;
-import eventstore.control.WriteEventsVerticle;
+import eventstore.control.*;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -26,9 +23,10 @@ class EventstoreMain {
 				if (ar.succeeded()) {
 					vertx.deployVerticle(new PushApi(), new DeploymentOptions().setConfig(new JsonObject().put("stomp.port", stompPort)).setWorker(true));
 					vertx.deployVerticle(new EventCacheVerticle());
-					vertx.deployVerticle(new EventPersistenceVerticle(), new DeploymentOptions().setConfig(new JsonObject()
+					vertx.deployVerticle(new InMemoryEventPersistenceVerticle());
+					/*vertx.deployVerticle(new RethinkDBEventPersistenceVerticle(), new DeploymentOptions().setConfig(new JsonObject()
 							.put("stomp.port", stompPort)
-					));
+					));*/
 					vertx.deployVerticle(new WriteEventsVerticle());
 					vertx.deployVerticle(new ReadEventsVerticle());
 					vertx.deployVerticle(new ApiRouter());

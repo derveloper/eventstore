@@ -115,7 +115,7 @@ public class ApiRouter extends AbstractVerticle {
 	}
 
 	private void listen(final HttpServer httpServer, final Router router) {
-		final Integer httpPort = Integer.valueOf(System.getProperty("EVENTSTORE_HTTP_PORT", "8080"));
+		final Integer httpPort = Integer.valueOf(System.getProperty("EVENTSTORE_HTTP_PORT", "8090"));
 		final Integer localPort = config().getInteger("http.port");
 
 		logger.info("Listening on " + (localPort == null ? httpPort : localPort));

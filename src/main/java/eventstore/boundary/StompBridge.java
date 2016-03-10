@@ -35,22 +35,30 @@ public class StompBridge extends AbstractVerticle {
 		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
 		final EventBus eventBus = vertx.eventBus();
 		final Integer localPort = config().getInteger("stomp.port");
+		final StompServerHandler stompServerHandler = StompServerHandler.create(vertx);
 		final StompServer stompServer = StompServer.create(vertx)
-				.handler(StompServerHandler.create(vertx)
-						.destinationFactory((v, s) -> {
+				.handler(stompServerHandler
+						.disconnectHandler(serverFrame -> {
+							logger.debug("disconnecting client " + serverFrame.frame());
+						})
+						.abortHandler(serverFrame -> {
+							logger.debug("aborting " + serverFrame.frame());
+						})
+						.subscribeHandler(serverFrame -> {
+							final String destination = serverFrame.frame().getDestination();
+							final Destination orCreateDestination = stompServerHandler.getOrCreateDestination(destination);
 							try {
-								final URI uri = new URI(s.trim());
+								final URI uri = new URI(destination.trim());
 								final JsonObject query = uri.toString().contains("?") ? new JsonObject(splitQuery(uri)) : new JsonObject();
 								final String[] split = uri.getPath().split("/");
 								if (split.length != 3) throw new URISyntaxException(uri.getPath(), "no stream specified");
 								query.put("streamName", split[2]);
-								query.put("address", s.trim());
+								query.put("address", destination.trim());
 								logger.debug("subscribing: " + query.encodePrettily());
 								eventBus.send("event.subscribe", query);
-								return Destination.topic(vertx, s.trim());
+								orCreateDestination.dispatch(serverFrame.connection(), serverFrame.frame());
 							} catch (UnsupportedEncodingException | URISyntaxException e) {
 								logger.error("invalid URI format", e);
-								return null;
 							}
 						})
 				)

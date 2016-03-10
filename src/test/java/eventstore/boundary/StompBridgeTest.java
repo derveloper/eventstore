@@ -1,7 +1,7 @@
 package eventstore.boundary;
 
 import eventstore.control.EventCacheVerticle;
-import eventstore.control.EventPersistenceVerticle;
+import eventstore.control.RethinkDBEventPersistenceVerticle;
 import eventstore.control.ReadEventsVerticle;
 import eventstore.control.WriteEventsVerticle;
 import io.vertx.core.DeploymentOptions;
@@ -45,7 +45,7 @@ public class StompBridgeTest {
 		deployBlocking(vertx, context, new JsonObject().put("stomp.port", port2), StompBridge.class.getName());
 		deployBlocking(vertx, context, new DeploymentOptions().setConfig(new JsonObject().put("stomp.port", port2)).setWorker(true), PushApi.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), EventCacheVerticle.class.getName());
-		deployBlocking(vertx, context, new JsonObject().put("stomp.port", port2), EventPersistenceVerticle.class.getName());
+		deployBlocking(vertx, context, new JsonObject().put("stomp.port", port2), RethinkDBEventPersistenceVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), WriteEventsVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), ReadEventsVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject().put("http.port", port), ApiRouter.class.getName());
@@ -78,6 +78,7 @@ public class StompBridgeTest {
 						System.out.println("subscribing to: " + address);
 						connection.subscribe(address,
 								frame -> {
+									System.out.println("received frame: " + frame);
 									context.assertEquals(
 											new JsonObject(json).getJsonObject("data"),
 											new JsonObject(frame.getBodyAsString()).getJsonObject("data"));

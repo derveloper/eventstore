@@ -4,7 +4,6 @@ import com.rethinkdb.RethinkDB;
 import com.rethinkdb.model.MapObject;
 import com.rethinkdb.net.Connection;
 import eventstore.util.RethinkUtils;
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
@@ -16,7 +15,7 @@ import io.vertx.core.logging.LoggerFactory;
 import java.util.HashMap;
 import java.util.List;
 
-public class EventPersistenceVerticle extends AbstractVerticle {
+public class RethinkDBEventPersistenceVerticle extends AbstractEventPersistenceVerticle {
 	private static final RethinkDB r = RethinkDB.r;
 	private static final String DBHOST = System.getenv("EVENTSTORE_RETHINKDB_ADDRESS") == null ? "localhost" : System.getenv("EVENTSTORE_RETHINKDB_ADDRESS");
 	private Logger logger;
@@ -35,14 +34,16 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 		logger.info("Started verticle " + this.getClass().getName());
 	}
 
-	private Handler<Message<Object>> writeStoreEventsConsumer() {
+	@Override
+	protected Handler<Message<Object>> writeStoreEventsConsumer() {
 		return message -> {
 			final JsonArray body = (JsonArray) message.body();
 			saveEventIfNotDuplicated(body);
 		};
 	}
 
-	private Handler<Message<Object>> readPersistedEventsConsumer() {
+	@Override
+	protected Handler<Message<Object>> readPersistedEventsConsumer() {
 		return message -> {
 			final JsonObject body = (JsonObject) message.body();
 			logger.debug("consume read.persisted.events: " + body.encodePrettily());
@@ -92,7 +93,8 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 		};
 	}
 
-	private void saveEventIfNotDuplicated(final JsonArray body) {
+	@Override
+	protected void saveEventIfNotDuplicated(final JsonArray body) {
 		vertx.executeBlocking(future -> {
 			Connection conn = null;
 			try {
@@ -101,7 +103,7 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 				body.forEach(o -> {
 					final JsonObject jsonObject = (JsonObject) o;
 					final String collectionName = "events";
-					saveToMongo(jsonObject, collectionName, finalConn);
+					persist(jsonObject, collectionName, finalConn);
 				});
 				if (!future.isComplete() && !future.succeeded() && !future.failed()) {
 					future.complete();
@@ -123,7 +125,8 @@ public class EventPersistenceVerticle extends AbstractVerticle {
 		});
 	}
 
-	private void saveToMongo(final JsonObject body, final String collectionName, Connection finalConn) {
+	@Override
+	protected void persist(final JsonObject body, final String collectionName, Connection finalConn) {
 		logger.debug("writing to db: " + body.encodePrettily());
 
 		boolean reconnected = false;
