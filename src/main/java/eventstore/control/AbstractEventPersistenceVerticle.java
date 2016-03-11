@@ -7,7 +7,7 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-public abstract class AbstractEventPersistenceVerticle extends AbstractVerticle {
+abstract class AbstractEventPersistenceVerticle extends AbstractVerticle {
     protected abstract Handler<Message<Object>> writeStoreEventsConsumer();
 
     protected abstract Handler<Message<Object>> readPersistedEventsConsumer();

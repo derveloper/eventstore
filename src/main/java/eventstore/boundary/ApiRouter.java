@@ -25,7 +25,7 @@ public class ApiRouter extends AbstractVerticle {
 
 	@Override
 	public void start() throws Exception {
-		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
+		logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
 		eventBus = vertx.eventBus();
 		final HttpServer httpServer = vertx.createHttpServer();
 		final Router router = Router.router(vertx);
@@ -68,12 +68,12 @@ public class ApiRouter extends AbstractVerticle {
 							responseBody = (String) body;
 						}
 
-						logger.debug("http response: " + responseBody);
+						logger.debug(String.format("http response: %s", responseBody));
 
 						routingContext.response().setStatusCode(HttpResponseStatus.OK.code()).end(responseBody);
 					} else {
 						@SuppressWarnings("ThrowableResultOfMethodCallIgnored") final ReplyException cause = (ReplyException) reply.cause();
-						logger.warn("http respondWithReply failed: " + cause.getMessage());
+						logger.warn(String.format("http respondWithReply failed: %s", cause.getMessage()));
 
 						routingContext.response().setStatusCode(cause.failureCode()).end();
 					}
@@ -108,7 +108,7 @@ public class ApiRouter extends AbstractVerticle {
 						: HttpResponseStatus.NO_CONTENT.code();
 
 				final String responseBody = events.encodePrettily();
-				logger.debug("http optimistic response: " + responseBody);
+				logger.debug(String.format("http optimistic response: %s", responseBody));
 				routingContext.response().setStatusCode(statusCode).end(responseBody);
 			}
 		};
@@ -118,7 +118,7 @@ public class ApiRouter extends AbstractVerticle {
 		final Integer httpPort = Integer.valueOf(System.getProperty("EVENTSTORE_HTTP_PORT", "8090"));
 		final Integer localPort = config().getInteger("http.port");
 
-		logger.info("Listening on " + (localPort == null ? httpPort : localPort));
+		logger.info(String.format("Listening on %d", localPort == null ? httpPort : localPort));
 
 		httpServer.requestHandler(router::accept).listen((localPort == null ? httpPort : localPort));
 	}

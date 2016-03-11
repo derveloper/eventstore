@@ -12,10 +12,10 @@ public class WriteEventsVerticle extends AbstractVerticle {
 
 	@Override
 	public void start() throws Exception {
-		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
+		logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
 		eventBus = vertx.eventBus();
 		eventBus.consumer("write.events", message -> {
-			logger.debug("consume write.events " + ((JsonArray) message.body()).encodePrettily());
+			logger.debug(String.format("consume write.events %s", ((JsonArray) message.body()).encodePrettily()));
 			eventBus.publish("write.store.events", message.body());
 		});
 	}

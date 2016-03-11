@@ -13,10 +13,10 @@ public class ReadEventsVerticle extends AbstractVerticle {
 
 	@Override
 	public void start() throws Exception {
-		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
+		logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
 		eventBus = vertx.eventBus();
 		eventBus.consumer("read.events", message -> {
-			logger.debug("consume read.events: " + ((JsonObject) message.body()).encodePrettily());
+			logger.debug(String.format("consume read.events: %s", ((JsonObject) message.body()).encodePrettily()));
 			final DeliveryOptions cacheDeliveryOptions = new DeliveryOptions()
 					.setSendTimeout(200);
 			eventBus.send("read.cache.events", message.body(), cacheDeliveryOptions, messageAsyncResult -> {

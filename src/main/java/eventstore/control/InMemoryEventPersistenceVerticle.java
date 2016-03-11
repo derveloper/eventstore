@@ -20,13 +20,13 @@ public class InMemoryEventPersistenceVerticle extends AbstractEventPersistenceVe
 
 	@Override
 	public void start() throws Exception {
-		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
+		logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
 		eventBus = vertx.eventBus();
 
 		eventBus.consumer("read.persisted.events", readPersistedEventsConsumer());
 		eventBus.consumer("write.store.events", writeStoreEventsConsumer());
 
-		logger.info("Started verticle " + this.getClass().getName());
+		logger.info(String.format("Started verticle %s", this.getClass().getName()));
 	}
 
 	@Override
@@ -41,7 +41,7 @@ public class InMemoryEventPersistenceVerticle extends AbstractEventPersistenceVe
 	protected Handler<Message<Object>> readPersistedEventsConsumer() {
 		return message -> {
 			final JsonObject body = (JsonObject) message.body();
-			logger.debug("consume read.persisted.events: " + body.encodePrettily());
+			logger.debug(String.format("consume read.persisted.events: %s", body.encodePrettily()));
 
 			message.reply(new JsonArray(Json.encode(store)));
 		};
@@ -51,10 +51,10 @@ public class InMemoryEventPersistenceVerticle extends AbstractEventPersistenceVe
 	protected void saveEventIfNotDuplicated(final JsonArray body) {
 		//noinspection unchecked
 		store.addAll(body.getList());
-		logger.debug("persisted " + body.encodePrettily());
+		logger.debug(String.format("persisted %s", body.encodePrettily()));
 		if(!body.isEmpty()) {
 			JsonObject first = body.getJsonObject(0);
-			eventBus.publish("/stream/"+first.getString("streamName")+"?eventType="+first.getString("eventType"), body);
+			eventBus.publish(String.format("/stream/%s?eventType=%s", first.getString("streamName"), first.getString("eventType")), body);
 		}
 	}
 

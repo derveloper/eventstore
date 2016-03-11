@@ -6,6 +6,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.stomp.Destination;
+import io.vertx.ext.stomp.DestinationFactory;
 import io.vertx.ext.stomp.StompServer;
 import io.vertx.ext.stomp.StompServerHandler;
 
@@ -32,30 +33,45 @@ public class StompBridge extends AbstractVerticle {
 
 	@Override
 	public void start() throws Exception {
-		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
+		logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
 		final EventBus eventBus = vertx.eventBus();
 		final Integer localPort = config().getInteger("stomp.port");
 		final StompServerHandler stompServerHandler = StompServerHandler.create(vertx);
 		final StompServer stompServer = StompServer.create(vertx)
 				.handler(stompServerHandler
-						.destinationFactory((vertx1, destination) -> {
+						.unsubscribeHandler(serverFrame -> {
+							System.out.println(serverFrame.frame());
+						})
+						.abortHandler(serverFrame -> {
+							System.out.println(serverFrame.frame());
+						})
+						.closeHandler(stompServerConnection -> {
+							System.out.println(stompServerConnection.session());
+						})
+						.subscribeHandler(serverFrame -> {
+							String destination = serverFrame.frame().getDestination();
 							try {
 								final URI uri = new URI(destination.trim());
 								final JsonObject query = uri.toString().contains("?") ? new JsonObject(splitQuery(uri)) : new JsonObject();
 								final String[] split = uri.getPath().split("/");
-								if (split.length != 3) throw new URISyntaxException(uri.getPath(), "no stream specified");
+
+								if (split.length != 3) {
+									throw new URISyntaxException(uri.getPath(), "no stream specified");
+								}
+
 								query.put("streamName", split[2]);
 								query.put("address", destination.trim());
-								logger.debug("subscribing: " + query.encodePrettily());
+								query.put("clientId", serverFrame.connection().session());
+
+								logger.debug(String.format("subscribing: %s", query.encodePrettily()));
 								eventBus.send("event.subscribe", query);
-								return Destination.topic(vertx1, destination.trim());
+								stompServerHandler.destinationFactory((v, s) -> Destination.topic(vertx, destination.trim()));
 							} catch (UnsupportedEncodingException | URISyntaxException e) {
 								logger.error("invalid URI format", e);
-								return null;
 							}
 						})
 				)
 				.listen(localPort, "0.0.0.0");
-		logger.info("STOMP listening on " + stompServer.actualPort());
+		logger.info(String.format("STOMP listening on %d", stompServer.actualPort()));
 	}
 }

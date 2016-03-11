@@ -18,13 +18,13 @@ public class EventCacheVerticle extends AbstractVerticle {
 
 	@Override
 	public void start() throws Exception {
-		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
+		logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
 		final EventBus eventBus = vertx.eventBus();
 
 		eventBus.consumer("read.cache.events", message -> {
 			final JsonObject body = (JsonObject) message.body();
 			final String streamName = (String) body.remove("streamName");
-			logger.debug("consume read.cache.events: " + body.encodePrettily());
+			logger.debug(String.format("consume read.cache.events: %s", body.encodePrettily()));
 			if (body.containsKey("id")) {
 				if (eventCache.containsKey(streamName) && eventCache.get(streamName).containsKey(body.getString("id"))) {
 					message.reply(new JsonArray().add(new JsonObject(Json.encode(eventCache.get(streamName).get(body.getString("id"))))));

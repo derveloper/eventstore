@@ -31,10 +31,11 @@ public class PushApi extends AbstractVerticle {
 		}
 
 		eventBus.consumer("event.subscribe", message -> {
-			logger.debug("subscribing" + message.body());
+			logger.debug(String.format("subscribing%s", message.body()));
 			final JsonObject body = (JsonObject) message.body();
 			final String address = (String) body.remove("address");
-			logger.debug("creating changefeed for: " + address + " with body " + body.encode());
+			final String clientId = (String) body.remove("clientId");
+			logger.debug(String.format("creating changefeed for: %s at %s with body %s", clientId, address, body.encode()));
 
 			eventBus.consumer(address, objectMessage -> {
 				final Frame frame = new Frame();
@@ -42,7 +43,7 @@ public class PushApi extends AbstractVerticle {
 				frame.setDestination(address);
 				frame.setBody(Buffer.buffer(((JsonArray) objectMessage.body()).encodePrettily()));
 				stompClientConnection.send(frame);
-				logger.debug("publishing to: " + frame);
+				logger.debug(String.format("publishing to: %s", frame));
 			});
 		});
 	}
