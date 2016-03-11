@@ -39,15 +39,7 @@ public class StompBridge extends AbstractVerticle {
 		final StompServerHandler stompServerHandler = StompServerHandler.create(vertx);
 		final StompServer stompServer = StompServer.create(vertx)
 				.handler(stompServerHandler
-						.unsubscribeHandler(serverFrame -> {
-							System.out.println(serverFrame.frame());
-						})
-						.abortHandler(serverFrame -> {
-							System.out.println(serverFrame.frame());
-						})
-						.closeHandler(stompServerConnection -> {
-							System.out.println(stompServerConnection.session());
-						})
+						.closeHandler(stompServerConnection -> eventBus.send("event.unsubscribe", stompServerConnection.session()))
 						.subscribeHandler(serverFrame -> {
 							String destination = serverFrame.frame().getDestination();
 							try {
@@ -65,7 +57,8 @@ public class StompBridge extends AbstractVerticle {
 
 								logger.debug(String.format("subscribing: %s", query.encodePrettily()));
 								eventBus.send("event.subscribe", query);
-								stompServerHandler.destinationFactory((v, s) -> Destination.topic(vertx, destination.trim()));
+								stompServerHandler.getOrCreateDestination(destination.trim())
+										.subscribe(serverFrame.connection(), serverFrame.frame());
 							} catch (UnsupportedEncodingException | URISyntaxException e) {
 								logger.error("invalid URI format", e);
 							}

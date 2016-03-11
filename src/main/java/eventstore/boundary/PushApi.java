@@ -13,16 +13,16 @@ import io.vertx.ext.stomp.StompClient;
 import io.vertx.ext.stomp.StompClientConnection;
 import io.vertx.ext.stomp.StompClientOptions;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class PushApi extends AbstractVerticle {
 	private Logger logger;
 	private StompClientConnection stompClientConnection;
+	private Map<String, MessageConsumer<Object>> subscriptions = new LinkedHashMap<>();
 
 	@Override
 	public void start() throws Exception {
-		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
+		logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
 		final EventBus eventBus = vertx.eventBus();
 
 		final Integer stompPort = config().getInteger("stomp.port");
@@ -31,13 +31,13 @@ public class PushApi extends AbstractVerticle {
 		}
 
 		eventBus.consumer("event.subscribe", message -> {
-			logger.debug(String.format("subscribing%s", message.body()));
+			logger.debug(String.format("subscribing %s", message.body()));
 			final JsonObject body = (JsonObject) message.body();
 			final String address = (String) body.remove("address");
 			final String clientId = (String) body.remove("clientId");
 			logger.debug(String.format("creating changefeed for: %s at %s with body %s", clientId, address, body.encode()));
 
-			eventBus.consumer(address, objectMessage -> {
+			MessageConsumer<Object> consumer = eventBus.consumer(address, objectMessage -> {
 				final Frame frame = new Frame();
 				frame.setCommand(Frame.Command.SEND);
 				frame.setDestination(address);
@@ -45,6 +45,14 @@ public class PushApi extends AbstractVerticle {
 				stompClientConnection.send(frame);
 				logger.debug(String.format("publishing to: %s", frame));
 			});
+			subscriptions.put(clientId, consumer);
+		});
+
+		eventBus.consumer("event.unsubscribe", message -> {
+			logger.debug(String.format("unsubscribing %s", message.body()));
+			String clientId = (String) message.body();
+			subscriptions.get(clientId).unregister();
+			subscriptions.remove(clientId);
 		});
 	}
 
@@ -56,15 +64,6 @@ public class PushApi extends AbstractVerticle {
 			if (ar.succeeded()) {
 				logger.debug("connected to STOMP");
 				stompClientConnection = ar.result();
-				stompClientConnection.pingHandler(stompClientConnection -> {
-					logger.debug("ping from STOMP");
-				});
-				stompClientConnection.connectionDroppedHandler(stompClientConnection -> {
-					logger.debug("connection dropped");
-				});
-				stompClientConnection.errorHandler(stompClientConnection -> {
-					logger.debug("connection error");
-				});
 				stompClientConnection.closeHandler(stompClientConnection -> {
 					logger.debug("connection close");
 					createStompClient(stompPort);
