@@ -19,20 +19,16 @@ class EventstoreMain {
 			final int stompPort = socket2.getLocalPort();
 			socket2.close();
 
-			vertx.deployVerticle(new EmbeddedCassandraVerticle(), stringAsyncResult -> {
-				if(stringAsyncResult.succeeded()) {
-					vertx.deployVerticle(new StompBridge(), new DeploymentOptions().setConfig(new JsonObject().put("stomp.port", stompPort)), ar -> {
-						if (ar.succeeded()) {
-							vertx.deployVerticle(new PushApi(), new DeploymentOptions().setConfig(new JsonObject().put("stomp.port", stompPort)).setWorker(true));
-							vertx.deployVerticle(new EventCacheVerticle());
-							vertx.deployVerticle(new CassandraEventPersistenceVerticle());
-							// vertx.deployVerticle(new InMemoryEventPersistenceVerticle());
-							// vertx.deployVerticle(new RethinkDBEventPersistenceVerticle());
-							vertx.deployVerticle(new WriteEventsVerticle());
-							vertx.deployVerticle(new ReadEventsVerticle());
-							vertx.deployVerticle(new ApiRouter());
-						}
-					});
+			vertx.deployVerticle(new StompBridge(), new DeploymentOptions().setConfig(new JsonObject().put("stomp.port", stompPort)), ar -> {
+				if (ar.succeeded()) {
+					vertx.deployVerticle(new PushApi(), new DeploymentOptions().setConfig(new JsonObject().put("stomp.port", stompPort)).setWorker(true));
+					vertx.deployVerticle(new EventCacheVerticle());
+					// vertx.deployVerticle(new CassandraEventPersistenceVerticle());
+					// vertx.deployVerticle(new InMemoryEventPersistenceVerticle());
+					vertx.deployVerticle(new RethinkDBEventPersistenceVerticle());
+					vertx.deployVerticle(new WriteEventsVerticle());
+					vertx.deployVerticle(new ReadEventsVerticle());
+					vertx.deployVerticle(new ApiRouter());
 				}
 			});
 		} catch (final IOException e) {

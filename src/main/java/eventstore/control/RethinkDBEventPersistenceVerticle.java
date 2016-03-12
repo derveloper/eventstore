@@ -21,7 +21,9 @@ import static eventstore.constants.Addresses.READ_PERSISTED_EVENTS_ADDRESS;
 
 public class RethinkDBEventPersistenceVerticle extends AbstractEventPersistenceVerticle {
 	private static final RethinkDB r = RethinkDB.r;
-	private static final String DBHOST = System.getenv("EVENTSTORE_RETHINKDB_ADDRESS") == null ? "localhost" : System.getenv("EVENTSTORE_RETHINKDB_ADDRESS");
+	private static final String DBHOST = System.getenv("EVENTSTORE_RETHINKDB_ADDRESS") == null
+			? "localhost"
+			: System.getenv("EVENTSTORE_RETHINKDB_ADDRESS");
 
 	@Override
 	protected Handler<Message<Object>> writeStoreEventsConsumer() {
@@ -82,8 +84,7 @@ public class RethinkDBEventPersistenceVerticle extends AbstractEventPersistenceV
 		};
 	}
 
-	@Override
-	protected void saveEventIfNotDuplicated(final JsonArray body) {
+	private void saveEventIfNotDuplicated(final JsonArray body) {
 		vertx.executeBlocking(future -> {
 			Connection conn = null;
 			try {
@@ -114,8 +115,7 @@ public class RethinkDBEventPersistenceVerticle extends AbstractEventPersistenceV
 		});
 	}
 
-	@Override
-	protected void persist(final JsonObject body, final String collectionName, Connection finalConn) {
+	private void persist(final JsonObject body, final String collectionName, Connection finalConn) {
 		logger.debug("writing to db: " + body.encodePrettily());
 
 		boolean reconnected = false;
@@ -127,6 +127,9 @@ public class RethinkDBEventPersistenceVerticle extends AbstractEventPersistenceV
 			}
 			final MapObject mapObject = RethinkUtils.getMapObjectFromJson(body);
 			r.db("eventstore").table(collectionName).insert(mapObject).run(finalConn);
+			String streamName = body.getString("streamName");
+			String eventType = body.getString("eventType");
+			eventBus.publish(String.format("/stream/%s?eventType=%s", streamName, eventType), body);
 			logger.debug("wrote " + body.encode() + " to DB.");
 		} catch (final Exception e) {
 			logger.error("failed writing to db: ", e);

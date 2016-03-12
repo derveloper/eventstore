@@ -108,8 +108,7 @@ public class CassandraEventPersistenceVerticle extends AbstractEventPersistenceV
 		};
 	}
 
-	@Override
-	protected void saveEventIfNotDuplicated(final JsonArray body) {
+	private void saveEventIfNotDuplicated(final JsonArray body) {
 		logger.debug(String.format("persisted %s", body.encodePrettily()));
 		if(!body.isEmpty()) {
 			JsonObject first = body.getJsonObject(0);
@@ -124,10 +123,5 @@ public class CassandraEventPersistenceVerticle extends AbstractEventPersistenceV
 				eventBus.publish(String.format("/stream/%s?eventType=%s", first.getString("streamName"), first.getString("eventType")), event);
 			});
 		}
-	}
-
-	@Override
-	protected void persist(JsonObject body, String collectionName, Connection finalConn) {
-
 	}
 }
