@@ -9,8 +9,11 @@ data_file_directories:
 hints_directory: /tmp/cassandra/hints
 saved_caches_directory: /tmp/cassandra/saved_caches
 listen_address: 127.0.0.1
+start_rpc: true
+rpc_address: 127.0.0.1
+broadcast_rpc_address: 127.0.0.1
+start_native_transport: true
 native_transport_port: 9042
-start_rpc: false
 seed_provider:
   - class_name: org.apache.cassandra.locator.SimpleSeedProvider
     parameters:
