@@ -7,6 +7,9 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
+import static eventstore.constants.Addresses.READ_CACHE_EVENTS_ADDRESS;
+import static eventstore.constants.Addresses.READ_EVENTS_ADDRESS;
+
 public class ReadEventsVerticle extends AbstractVerticle {
 	private EventBus eventBus;
 	private Logger logger;
@@ -15,11 +18,11 @@ public class ReadEventsVerticle extends AbstractVerticle {
 	public void start() throws Exception {
 		logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
 		eventBus = vertx.eventBus();
-		eventBus.consumer("read.events", message -> {
+		eventBus.consumer(READ_EVENTS_ADDRESS, message -> {
 			logger.debug(String.format("consume read.events: %s", ((JsonObject) message.body()).encodePrettily()));
 			final DeliveryOptions cacheDeliveryOptions = new DeliveryOptions()
 					.setSendTimeout(200);
-			eventBus.send("read.cache.events", message.body(), cacheDeliveryOptions, messageAsyncResult -> {
+			eventBus.send(READ_CACHE_EVENTS_ADDRESS, message.body(), cacheDeliveryOptions, messageAsyncResult -> {
 				if (messageAsyncResult.succeeded()) {
 					logger.debug("reply from read.cache.events");
 					message.reply(messageAsyncResult.result().body());

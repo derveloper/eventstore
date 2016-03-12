@@ -5,8 +5,6 @@ import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.stomp.Destination;
-import io.vertx.ext.stomp.DestinationFactory;
 import io.vertx.ext.stomp.StompServer;
 import io.vertx.ext.stomp.StompServerHandler;
 
@@ -16,6 +14,9 @@ import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import static eventstore.constants.Addresses.EVENT_SUBSCRIBE_ADDRESS;
+import static eventstore.constants.Addresses.EVENT_UNSUBSCRIBE_ADDRESS;
 
 public class StompBridge extends AbstractVerticle {
 	private Logger logger;
@@ -39,7 +40,7 @@ public class StompBridge extends AbstractVerticle {
 		final StompServerHandler stompServerHandler = StompServerHandler.create(vertx);
 		final StompServer stompServer = StompServer.create(vertx)
 				.handler(stompServerHandler
-						.closeHandler(stompServerConnection -> eventBus.send("event.unsubscribe", stompServerConnection.session()))
+						.closeHandler(stompServerConnection -> eventBus.send(EVENT_UNSUBSCRIBE_ADDRESS, stompServerConnection.session()))
 						.subscribeHandler(serverFrame -> {
 							String destination = serverFrame.frame().getDestination();
 							try {
@@ -56,7 +57,7 @@ public class StompBridge extends AbstractVerticle {
 								query.put("clientId", serverFrame.connection().session());
 
 								logger.debug(String.format("subscribing: %s", query.encodePrettily()));
-								eventBus.send("event.subscribe", query);
+								eventBus.send(EVENT_SUBSCRIBE_ADDRESS, query);
 								stompServerHandler.getOrCreateDestination(destination.trim())
 										.subscribe(serverFrame.connection(), serverFrame.frame());
 							} catch (UnsupportedEncodingException | URISyntaxException e) {

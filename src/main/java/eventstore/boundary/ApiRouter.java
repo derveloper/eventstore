@@ -1,5 +1,6 @@
 package eventstore.boundary;
 
+import eventstore.constants.Addresses;
 import eventstore.entity.PersistedEvent;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.AbstractVerticle;
@@ -19,6 +20,9 @@ import io.vertx.ext.web.handler.BodyHandler;
 
 import java.util.Map;
 
+import static eventstore.constants.Addresses.READ_EVENTS_ADDRESS;
+import static eventstore.constants.Addresses.WRITE_EVENTS_ADDRESS;
+
 public class ApiRouter extends AbstractVerticle {
 	private EventBus eventBus;
 	private Logger logger;
@@ -31,8 +35,8 @@ public class ApiRouter extends AbstractVerticle {
 		final Router router = Router.router(vertx);
 		router.route().handler(BodyHandler.create());
 
-		router.post("/stream/:streamName*").handler(sendMessage("write.events", false));
-		router.get("/stream/:streamName*").handler(sendMessage("read.events", true));
+		router.post("/stream/:streamName*").handler(sendMessage(WRITE_EVENTS_ADDRESS, false));
+		router.get("/stream/:streamName*").handler(sendMessage(READ_EVENTS_ADDRESS, true));
 
 		listen(httpServer, router);
 	}

@@ -13,7 +13,6 @@ import java.net.InetSocketAddress;
 import java.util.UUID;
 
 public class CassandraEventPersistenceVerticle extends AbstractEventPersistenceVerticle {
-	private Cluster cluster;
 	private Session session;
 	private PreparedStatement statement;
 	private PreparedStatement queryByEventType;
@@ -33,7 +32,7 @@ public class CassandraEventPersistenceVerticle extends AbstractEventPersistenceV
 		try {
 			Thread.sleep(2000);
 			System.out.println("connecting...");
-			cluster = Cluster.builder()
+			Cluster cluster = Cluster.builder()
 					.addContactPointsWithPorts(new InetSocketAddress("127.0.0.1", 9042))
 					.withReconnectionPolicy(new ConstantReconnectionPolicy(200))
 					.withSocketOptions(new SocketOptions().setConnectTimeoutMillis(10000))

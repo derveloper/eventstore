@@ -1,5 +1,6 @@
 package eventstore.control;
 
+import eventstore.constants.Addresses;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
@@ -12,6 +13,8 @@ import io.vertx.core.logging.LoggerFactory;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import static eventstore.constants.Addresses.CACHE_EVENTS_ADDRESS;
+
 public class EventCacheVerticle extends AbstractVerticle {
 	private final Map<String, Map<String, JsonObject>> eventCache = new LinkedHashMap<>();
 	private Logger logger;
@@ -21,7 +24,7 @@ public class EventCacheVerticle extends AbstractVerticle {
 		logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
 		final EventBus eventBus = vertx.eventBus();
 
-		eventBus.consumer("read.cache.events", message -> {
+		eventBus.consumer(Addresses.READ_CACHE_EVENTS_ADDRESS, message -> {
 			final JsonObject body = (JsonObject) message.body();
 			final String streamName = (String) body.remove("streamName");
 			logger.debug(String.format("consume read.cache.events: %s", body.encodePrettily()));
@@ -41,7 +44,7 @@ public class EventCacheVerticle extends AbstractVerticle {
 				message.reply(jsonArray);
 			}
 		});
-		eventBus.consumer("cache.events", this::writeCache);
+		eventBus.consumer(CACHE_EVENTS_ADDRESS, this::writeCache);
 	}
 
 	private void writeCache(final Message<Object> message) {

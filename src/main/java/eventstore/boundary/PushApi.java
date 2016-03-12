@@ -12,9 +12,13 @@ import io.vertx.ext.stomp.Frame;
 import io.vertx.ext.stomp.StompClient;
 import io.vertx.ext.stomp.StompClientConnection;
 import io.vertx.ext.stomp.StompClientOptions;
-import org.jgroups.util.Tuple;
 
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import static eventstore.constants.Addresses.EVENT_SUBSCRIBE_ADDRESS;
+import static eventstore.constants.Addresses.EVENT_UNSUBSCRIBE_ADDRESS;
 
 public class PushApi extends AbstractVerticle {
 	private Logger logger;
@@ -32,7 +36,7 @@ public class PushApi extends AbstractVerticle {
 			createStompClient(stompPort);
 		}
 
-		eventBus.consumer("event.subscribe", message -> {
+		eventBus.consumer(EVENT_SUBSCRIBE_ADDRESS, message -> {
 			logger.debug(String.format("subscribing %s", message.body()));
 			final JsonObject body = (JsonObject) message.body();
 			final String address = (String) body.remove("address");
@@ -56,7 +60,7 @@ public class PushApi extends AbstractVerticle {
 			subscriptions.put(address, new AbstractMap.SimpleEntry<>(consumer, 0));
 		});
 
-		eventBus.consumer("event.unsubscribe", message -> {
+		eventBus.consumer(EVENT_UNSUBSCRIBE_ADDRESS, message -> {
 			logger.debug(String.format("unsubscribing %s", message.body()));
 			final String clientId = (String) message.body();
 			final String address = clientToAddress.get(clientId);
