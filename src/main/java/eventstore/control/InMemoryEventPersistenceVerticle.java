@@ -24,7 +24,7 @@ public class InMemoryEventPersistenceVerticle extends AbstractEventPersistenceVe
 		eventBus = vertx.eventBus();
 
 		eventBus.consumer("read.persisted.events", readPersistedEventsConsumer());
-		eventBus.consumer("write.store.events", writeStoreEventsConsumer());
+		eventBus.consumer("persist.events", writeStoreEventsConsumer());
 
 		logger.info(String.format("Started verticle %s", this.getClass().getName()));
 	}

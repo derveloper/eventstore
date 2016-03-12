@@ -41,8 +41,7 @@ public class EventCacheVerticle extends AbstractVerticle {
 				message.reply(jsonArray);
 			}
 		});
-		eventBus.consumer("write.store.events", this::writeCache);
-		eventBus.consumer("write.cache.events", this::writeCache);
+		eventBus.consumer("cache.events", this::writeCache);
 	}
 
 	private void writeCache(final Message<Object> message) {

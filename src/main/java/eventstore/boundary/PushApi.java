@@ -12,13 +12,15 @@ import io.vertx.ext.stomp.Frame;
 import io.vertx.ext.stomp.StompClient;
 import io.vertx.ext.stomp.StompClientConnection;
 import io.vertx.ext.stomp.StompClientOptions;
+import org.jgroups.util.Tuple;
 
 import java.util.*;
 
 public class PushApi extends AbstractVerticle {
 	private Logger logger;
 	private StompClientConnection stompClientConnection;
-	private Map<String, MessageConsumer<Object>> subscriptions = new LinkedHashMap<>();
+	private Map<String, Map.Entry<MessageConsumer<Object>, Integer>> subscriptions = new LinkedHashMap<>();
+	private Map<String, String> clientToAddress = new LinkedHashMap<>();
 
 	@Override
 	public void start() throws Exception {
@@ -37,6 +39,12 @@ public class PushApi extends AbstractVerticle {
 			final String clientId = (String) body.remove("clientId");
 			logger.debug(String.format("creating changefeed for: %s at %s with body %s", clientId, address, body.encode()));
 
+			clientToAddress.put(clientId, address);
+			if(subscriptions.containsKey(address)) {
+				subscriptions.get(address).setValue(subscriptions.get(address).getValue() + 1);
+				return;
+			}
+
 			MessageConsumer<Object> consumer = eventBus.consumer(address, objectMessage -> {
 				final Frame frame = new Frame();
 				frame.setCommand(Frame.Command.SEND);
@@ -45,14 +53,20 @@ public class PushApi extends AbstractVerticle {
 				stompClientConnection.send(frame);
 				logger.debug(String.format("publishing to: %s", frame));
 			});
-			subscriptions.put(clientId, consumer);
+			subscriptions.put(address, new AbstractMap.SimpleEntry<>(consumer, 0));
 		});
 
 		eventBus.consumer("event.unsubscribe", message -> {
 			logger.debug(String.format("unsubscribing %s", message.body()));
-			String clientId = (String) message.body();
-			subscriptions.get(clientId).unregister();
-			subscriptions.remove(clientId);
+			final String clientId = (String) message.body();
+			final String address = clientToAddress.get(clientId);
+			if(subscriptions.containsKey(address)) {
+				subscriptions.get(address).setValue(subscriptions.get(address).getValue() - 1);
+				if(subscriptions.get(address).getValue() == 0) {
+					subscriptions.get(address).getKey().unregister();
+					subscriptions.remove(address);
+				}
+			}
 		});
 	}
 

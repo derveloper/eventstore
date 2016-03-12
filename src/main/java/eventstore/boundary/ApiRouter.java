@@ -101,7 +101,7 @@ public class ApiRouter extends AbstractVerticle {
 					events.add(new JsonObject(Json.encode(persistedEvent)));
 				}
 
-				eventBus.publish(address, events);
+				eventBus.send(address, events);
 
 				final int statusCode = HttpMethod.POST.equals(routingContext.request().method())
 						? HttpResponseStatus.CREATED.code()
