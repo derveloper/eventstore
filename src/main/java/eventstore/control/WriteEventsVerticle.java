@@ -16,8 +16,11 @@ public class WriteEventsVerticle extends AbstractVerticle {
 		eventBus = vertx.eventBus();
 		eventBus.consumer("write.events", message -> {
 			logger.debug(String.format("consume write.events %s", ((JsonArray) message.body()).encodePrettily()));
-			eventBus.publish("cache.events", message.body());
-			eventBus.send("persist.events", message.body());
+			eventBus.send("persist.events", message.body(), messageAsyncResult -> {
+				if(messageAsyncResult.succeeded()) {
+					eventBus.publish("cache.events", message.body());
+				}
+			});
 		});
 	}
 }

@@ -13,27 +13,18 @@ import io.vertx.core.logging.LoggerFactory;
 import java.util.LinkedList;
 import java.util.List;
 
+import static eventstore.constants.Addresses.PERSIST_EVENTS_ADDRESS;
+import static eventstore.constants.Addresses.READ_PERSISTED_EVENTS_ADDRESS;
+
 public class InMemoryEventPersistenceVerticle extends AbstractEventPersistenceVerticle {
-	private Logger logger;
-	private EventBus eventBus;
 	private List<JsonObject> store = new LinkedList<>();
-
-	@Override
-	public void start() throws Exception {
-		logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
-		eventBus = vertx.eventBus();
-
-		eventBus.consumer("read.persisted.events", readPersistedEventsConsumer());
-		eventBus.consumer("persist.events", writeStoreEventsConsumer());
-
-		logger.info(String.format("Started verticle %s", this.getClass().getName()));
-	}
 
 	@Override
 	protected Handler<Message<Object>> writeStoreEventsConsumer() {
 		return message -> {
 			final JsonArray body = (JsonArray) message.body();
 			saveEventIfNotDuplicated(body);
+			message.reply(true);
 		};
 	}
 

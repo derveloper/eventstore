@@ -3,6 +3,7 @@ package eventstore.control;
 import com.rethinkdb.RethinkDB;
 import com.rethinkdb.model.MapObject;
 import com.rethinkdb.net.Connection;
+import eventstore.constants.Addresses;
 import eventstore.util.RethinkUtils;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
@@ -15,24 +16,12 @@ import io.vertx.core.logging.LoggerFactory;
 import java.util.HashMap;
 import java.util.List;
 
+import static eventstore.constants.Addresses.PERSIST_EVENTS_ADDRESS;
+import static eventstore.constants.Addresses.READ_PERSISTED_EVENTS_ADDRESS;
+
 public class RethinkDBEventPersistenceVerticle extends AbstractEventPersistenceVerticle {
 	private static final RethinkDB r = RethinkDB.r;
 	private static final String DBHOST = System.getenv("EVENTSTORE_RETHINKDB_ADDRESS") == null ? "localhost" : System.getenv("EVENTSTORE_RETHINKDB_ADDRESS");
-	private Logger logger;
-	private EventBus eventBus;
-
-	@Override
-	public void start() throws Exception {
-		logger = LoggerFactory.getLogger(getClass() + "_" + deploymentID());
-		eventBus = vertx.eventBus();
-
-		logger.info("connecting to rethink on " + DBHOST);
-
-		eventBus.consumer("read.persisted.events", readPersistedEventsConsumer());
-		eventBus.consumer("write.store.events", writeStoreEventsConsumer());
-
-		logger.info("Started verticle " + this.getClass().getName());
-	}
 
 	@Override
 	protected Handler<Message<Object>> writeStoreEventsConsumer() {

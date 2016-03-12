@@ -14,16 +14,6 @@
 		<maven.compiler.source>1.8</maven.compiler.source>
 	</properties>
 
-	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>io.vertx</groupId>
-				<artifactId>vertx-stomp</artifactId>
-				<version>3.2.1</version>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
-
 	<dependencies>
 		<dependency>
 			<groupId>io.vertx</groupId>
@@ -43,6 +33,27 @@
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-stomp</artifactId>
+			<version>3.2.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.cassandra</groupId>
+			<artifactId>cassandra-all</artifactId>
+			<version>3.3</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.cassandra</groupId>
+			<artifactId>apache-cassandra</artifactId>
+			<version>3.3</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.cassandra</groupId>
+			<artifactId>cassandra-thrift</artifactId>
+			<version>3.3</version>
+		</dependency>
+		<dependency>
+			<groupId>com.datastax.cassandra</groupId>
+			<artifactId>cassandra-driver-core</artifactId>
+			<version>3.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>com.rethinkdb</groupId>

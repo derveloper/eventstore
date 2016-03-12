@@ -1,0 +1,17 @@
+cluster_name: eventstore
+commitlog_directory: /tmp/cassandra/commitlog
+commitlog_sync: periodic
+commitlog_sync_period_in_ms: 10000
+partitioner: org.apache.cassandra.dht.Murmur3Partitioner
+endpoint_snitch: SimpleSnitch
+data_file_directories:
+  - /tmp/cassandra/data
+hints_directory: /tmp/cassandra/hints
+saved_caches_directory: /tmp/cassandra/saved_caches
+listen_address: 127.0.0.1
+native_transport_port: 9042
+start_rpc: false
+seed_provider:
+  - class_name: org.apache.cassandra.locator.SimpleSeedProvider
+    parameters:
+      - seeds: "127.0.0.1"
