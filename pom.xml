@@ -6,13 +6,96 @@
 
 	<groupId>cc.vileda</groupId>
 	<artifactId>eventstore</artifactId>
-	<packaging>jar</packaging>
+	<packaging>pom</packaging>
 	<version>1.0-SNAPSHOT</version>
+	<modules>
+		<module>http-api</module>
+		<module>shared-kernel</module>
+		<module>persistence-rethinkdb</module>
+		<module>persistence-cassandra</module>
+		<module>event-writer</module>
+		<module>push-api</module>
+		<module>stomp-bridge</module>
+		<module>event-reader</module>
+		<module>event-cache</module>
+		<module>persistence-inmemory</module>
+		<module>eventstore-tests</module>
+	</modules>
 
 	<properties>
 		<maven.compiler.target>1.8</maven.compiler.target>
 		<maven.compiler.source>1.8</maven.compiler.source>
 	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>cc.vileda</groupId>
+				<artifactId>shared-kernel</artifactId>
+				<version>1.0-SNAPSHOT</version>
+			</dependency>
+			<dependency>
+				<groupId>cc.vileda</groupId>
+				<artifactId>event-reader</artifactId>
+				<version>1.0-SNAPSHOT</version>
+			</dependency>
+			<dependency>
+				<groupId>cc.vileda</groupId>
+				<artifactId>persistence-inmemory</artifactId>
+				<version>1.0-SNAPSHOT</version>
+			</dependency>
+			<dependency>
+				<groupId>cc.vileda</groupId>
+				<artifactId>event-cache</artifactId>
+				<version>1.0-SNAPSHOT</version>
+			</dependency>
+			<dependency>
+				<groupId>cc.vileda</groupId>
+				<artifactId>event-writer</artifactId>
+				<version>1.0-SNAPSHOT</version>
+			</dependency>
+			<dependency>
+				<groupId>cc.vileda</groupId>
+				<artifactId>http-api</artifactId>
+				<version>1.0-SNAPSHOT</version>
+			</dependency>
+			<dependency>
+				<groupId>cc.vileda</groupId>
+				<artifactId>stomp-bridge</artifactId>
+				<version>1.0-SNAPSHOT</version>
+			</dependency>
+			<dependency>
+				<groupId>cc.vileda</groupId>
+				<artifactId>push-api</artifactId>
+				<version>1.0-SNAPSHOT</version>
+			</dependency>
+			<dependency>
+				<groupId>io.vertx</groupId>
+				<artifactId>vertx-web</artifactId>
+				<version>3.2.1</version>
+			</dependency>
+			<dependency>
+				<groupId>io.vertx</groupId>
+				<artifactId>vertx-stomp</artifactId>
+				<version>3.2.1</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.cassandra</groupId>
+				<artifactId>cassandra-all</artifactId>
+				<version>3.3</version>
+			</dependency>
+			<dependency>
+				<groupId>com.datastax.cassandra</groupId>
+				<artifactId>cassandra-driver-core</artifactId>
+				<version>3.0.0</version>
+			</dependency>
+			<dependency>
+				<groupId>com.rethinkdb</groupId>
+				<artifactId>rethinkdb-driver</artifactId>
+				<version>2.2-beta-1</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<dependencies>
 		<dependency>
@@ -24,41 +107,6 @@
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-hazelcast</artifactId>
 			<version>3.2.1</version>
-		</dependency>
-		<dependency>
-			<groupId>io.vertx</groupId>
-			<artifactId>vertx-web</artifactId>
-			<version>3.2.1</version>
-		</dependency>
-		<dependency>
-			<groupId>io.vertx</groupId>
-			<artifactId>vertx-stomp</artifactId>
-			<version>3.2.1</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.cassandra</groupId>
-			<artifactId>cassandra-all</artifactId>
-			<version>3.3</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.cassandra</groupId>
-			<artifactId>apache-cassandra</artifactId>
-			<version>3.3</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.cassandra</groupId>
-			<artifactId>cassandra-thrift</artifactId>
-			<version>3.3</version>
-		</dependency>
-		<dependency>
-			<groupId>com.datastax.cassandra</groupId>
-			<artifactId>cassandra-driver-core</artifactId>
-			<version>3.0.0</version>
-		</dependency>
-		<dependency>
-			<groupId>com.rethinkdb</groupId>
-			<artifactId>rethinkdb-driver</artifactId>
-			<version>2.2-beta-1</version>
 		</dependency>
 		<dependency>
 			<groupId>io.vertx</groupId>
@@ -96,14 +144,6 @@
 							<goal>shade</goal>
 						</goals>
 						<configuration>
-							<transformers>
-								<transformer
-										implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<manifestEntries>
-										<Main-Class>eventstore.EventstoreMain</Main-Class>
-									</manifestEntries>
-								</transformer>
-							</transformers>
 							<artifactSet/>
 							<outputFile>${project.build.directory}/${project.artifactId}-${project.version}-fat.jar</outputFile>
 						</configuration>
