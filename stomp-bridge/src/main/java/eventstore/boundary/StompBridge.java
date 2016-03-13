@@ -45,8 +45,17 @@ public class StompBridge extends AbstractVerticle {
 		logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
 		final EventBus eventBus = vertx.eventBus();
 		final Integer localPort = config().getInteger("stomp.port", 8091);
+		final String hostAddress;
 		final StompServerHandler stompServerHandler = StompServerHandler.create(vertx);
-		final String hostAddress = Inet4Address.getLocalHost().getHostAddress();
+
+		if(config().getString("stomp.address", null) == null) {
+			hostAddress = Inet4Address.getLocalHost().getHostAddress();
+			putAddressToSharedData(hostAddress);
+		}
+		else {
+			hostAddress = config().getString("stomp.address");
+		}
+
 		final StompServer stompServer = StompServer.create(vertx)
 				.handler(stompServerHandler
 						.closeHandler(stompServerConnection -> eventBus.send(EVENT_UNSUBSCRIBE_ADDRESS, stompServerConnection.session()))
@@ -77,24 +86,26 @@ public class StompBridge extends AbstractVerticle {
 						})
 				)
 				.listen(localPort, hostAddress);
+		logger.info(String.format("STOMP listening on %s:%d", hostAddress, stompServer.actualPort()));
+	}
 
+	private void putAddressToSharedData(String hostAddress) {
 		final SharedData sd = vertx.sharedData();
 
 		sd.<String, String>getClusterWideMap(EVENTSTORE_CONFIG_MAP, res -> {
-			if (res.succeeded()) {
-				final AsyncMap<String, String> map = res.result();
-				map.put(STOMP_BRIDGE_ADDRESS_KEY, hostAddress, resPut -> {
-					if(resPut.succeeded()) {
-						logger.info(String.format("putted address %s", hostAddress));
-					}
-					else {
-						logger.error("failed setting bridge address");
-					}
-				});
-			} else {
-				logger.error("failed setting bridge address");
-			}
-		});
-		logger.info(String.format("STOMP listening on %s:%d", hostAddress, stompServer.actualPort()));
+            if (res.succeeded()) {
+                final AsyncMap<String, String> map = res.result();
+                map.put(STOMP_BRIDGE_ADDRESS_KEY, hostAddress, resPut -> {
+                    if(resPut.succeeded()) {
+                        logger.info(String.format("putted address %s", hostAddress));
+                    }
+                    else {
+                        logger.error("failed setting bridge address");
+                    }
+                });
+            } else {
+                logger.error("failed setting bridge address");
+            }
+        });
 	}
 }
