@@ -21,6 +21,7 @@ import java.util.Map;
 
 import static eventstore.shared.constants.Addresses.READ_EVENTS_ADDRESS;
 import static eventstore.shared.constants.Addresses.WRITE_EVENTS_ADDRESS;
+import static eventstore.shared.constants.MessageFields.*;
 
 public class HttpApi extends AbstractVerticle {
 	private EventBus eventBus;
@@ -56,8 +57,8 @@ public class HttpApi extends AbstractVerticle {
 					requestBody.put(entry.getKey(), entry.getValue());
 				}
 
-				final String streamName = routingContext.request().getParam("streamName");
-				requestBody.put("streamName", streamName);
+				final String streamName = routingContext.request().getParam(EVENT_STREAM_NAME_FIELD);
+				requestBody.put(EVENT_STREAM_NAME_FIELD, streamName);
 				eventBus.send(address, requestBody, reply -> {
 					if (reply.succeeded()) {
 						final Object body = reply.result().body();
@@ -84,23 +85,23 @@ public class HttpApi extends AbstractVerticle {
 			} else {
 				final String bodyAsString = routingContext.getBodyAsString();
 				final JsonArray events = new JsonArray();
-				final String streamName = routingContext.request().getParam("streamName");
+				final String streamName = routingContext.request().getParam(EVENT_STREAM_NAME_FIELD);
 				if (bodyAsString.trim().startsWith("[")) {
 					routingContext.getBodyAsJsonArray().forEach(o -> {
 						final JsonObject jsonObject = (JsonObject) o;
 						final PersistedEvent persistedEvent = new PersistedEvent(
-								jsonObject.getString("id"),
+								jsonObject.getString(EVENT_ID_FIELD),
 								streamName,
-								jsonObject.getString("eventType", "undefined"),
-								jsonObject.getJsonObject("data", new JsonObject()));
+								jsonObject.getString(EVENT_TYPE_FIELD, "undefined"),
+								jsonObject.getJsonObject(EVENT_DATA_FIELD, new JsonObject()));
 						events.add(new JsonObject(Json.encode(persistedEvent)));
 					});
 				} else {
 					final PersistedEvent persistedEvent = new PersistedEvent(
-							routingContext.getBodyAsJson().getString("id"),
+							routingContext.getBodyAsJson().getString(EVENT_ID_FIELD),
 							streamName,
-							routingContext.getBodyAsJson().getString("eventType", "undefined"),
-							routingContext.getBodyAsJson().getJsonObject("data", new JsonObject()));
+							routingContext.getBodyAsJson().getString(EVENT_TYPE_FIELD, "undefined"),
+							routingContext.getBodyAsJson().getJsonObject(EVENT_DATA_FIELD, new JsonObject()));
 					events.add(new JsonObject(Json.encode(persistedEvent)));
 				}
 

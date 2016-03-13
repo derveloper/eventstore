@@ -1,5 +1,7 @@
 package eventstore.boundary;
 
+import eventstore.shared.constants.MessageFields;
+import eventstore.shared.constants.SharedDataKeys;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
@@ -20,6 +22,11 @@ import java.util.Map;
 
 import static eventstore.shared.constants.Addresses.EVENT_SUBSCRIBE_ADDRESS;
 import static eventstore.shared.constants.Addresses.EVENT_UNSUBSCRIBE_ADDRESS;
+import static eventstore.shared.constants.MessageFields.EVENT_ADDRESS_FIELD;
+import static eventstore.shared.constants.MessageFields.EVENT_CLIENT_ID_FIELD;
+import static eventstore.shared.constants.MessageFields.EVENT_STREAM_NAME_FIELD;
+import static eventstore.shared.constants.SharedDataKeys.EVENTSTORE_CONFIG_MAP;
+import static eventstore.shared.constants.SharedDataKeys.STOMP_BRIDGE_ADDRESS_KEY;
 
 public class StompBridge extends AbstractVerticle {
 	private Logger logger;
@@ -49,16 +56,18 @@ public class StompBridge extends AbstractVerticle {
 							String destination = serverFrame.frame().getDestination();
 							try {
 								final URI uri = new URI(destination.trim());
-								final JsonObject query = uri.toString().contains("?") ? new JsonObject(splitQuery(uri)) : new JsonObject();
+								final JsonObject query = uri.toString().contains("?")
+										? new JsonObject(splitQuery(uri))
+										: new JsonObject();
 								final String[] split = uri.getPath().split("/");
 
 								if (split.length != 3) {
 									throw new URISyntaxException(uri.getPath(), "no stream specified");
 								}
 
-								query.put("streamName", split[2]);
-								query.put("address", destination.trim());
-								query.put("clientId", serverFrame.connection().session());
+								query.put(EVENT_STREAM_NAME_FIELD, split[2]);
+								query.put(EVENT_ADDRESS_FIELD, destination.trim());
+								query.put(EVENT_CLIENT_ID_FIELD, serverFrame.connection().session());
 
 								logger.debug(String.format("subscribing: %s", query.encodePrettily()));
 								eventBus.send(EVENT_SUBSCRIBE_ADDRESS, query);
@@ -73,10 +82,10 @@ public class StompBridge extends AbstractVerticle {
 
 		final SharedData sd = vertx.sharedData();
 
-		sd.<String, String>getClusterWideMap("eventstore-config", res -> {
+		sd.<String, String>getClusterWideMap(EVENTSTORE_CONFIG_MAP, res -> {
 			if (res.succeeded()) {
 				final AsyncMap<String, String> map = res.result();
-				map.put("stomp-bridge-address", hostAddress, resPut -> {
+				map.put(STOMP_BRIDGE_ADDRESS_KEY, hostAddress, resPut -> {
 					if(resPut.succeeded()) {
 						logger.info(String.format("putted address %s", hostAddress));
 					}

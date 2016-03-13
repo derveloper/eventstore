@@ -12,6 +12,8 @@ import org.apache.commons.lang3.StringUtils;
 import java.net.InetSocketAddress;
 import java.util.UUID;
 
+import static eventstore.shared.constants.MessageFields.*;
+
 public class CassandraEventPersistenceVerticle extends AbstractEventPersistenceVerticle {
 	private Session session;
 	private PreparedStatement statement;
@@ -83,7 +85,7 @@ public class CassandraEventPersistenceVerticle extends AbstractEventPersistenceV
 			final JsonObject body = (JsonObject) message.body();
 			logger.debug(String.format("consume read.persisted.events: %s", body.encodePrettily()));
 
-			final String eventType = body.getString("eventType");
+			final String eventType = body.getString(EVENT_TYPE_FIELD);
 
 			final ResultSet results;
 			if(StringUtils.isNotEmpty(eventType)) {
@@ -96,11 +98,10 @@ public class CassandraEventPersistenceVerticle extends AbstractEventPersistenceV
 			final JsonArray response = new JsonArray();
 			for (final Row row : results) {
 				final JsonObject obj = new JsonObject()
-						.put("id", row.getUUID("id").toString())
-						.put("createdAt", Integer.valueOf(row.getString("createdAt")))
-						.put("eventType", row.getString("eventType"))
-						.put("data", new JsonObject(row.getString("data")))
-						;
+						.put(EVENT_ID_FIELD, row.getUUID(EVENT_ID_FIELD).toString())
+						.put(EVENT_CREATED_AT_FIELD, Integer.valueOf(row.getString(EVENT_CREATED_AT_FIELD)))
+						.put(EVENT_TYPE_FIELD, row.getString(EVENT_TYPE_FIELD))
+						.put(EVENT_DATA_FIELD, new JsonObject(row.getString(EVENT_DATA_FIELD)));
 				response.add(obj);
 			}
 
@@ -116,11 +117,13 @@ public class CassandraEventPersistenceVerticle extends AbstractEventPersistenceV
 				final JsonObject event = (JsonObject) o;
 				final BoundStatement boundStatement = new BoundStatement(statement);
 				session.executeAsync(boundStatement.bind(
-						UUID.fromString(event.getString("id")),
-						String.valueOf(event.getInteger("createdAt")),
-						event.getString("eventType"),
-						event.getJsonObject("data").encode()));
-				eventBus.publish(String.format("/stream/%s?eventType=%s", first.getString("streamName"), first.getString("eventType")), event);
+						UUID.fromString(event.getString(EVENT_ID_FIELD)),
+						String.valueOf(event.getInteger(EVENT_CREATED_AT_FIELD)),
+						event.getString(EVENT_TYPE_FIELD),
+						event.getJsonObject(EVENT_DATA_FIELD).encode()));
+				eventBus.publish(String.format("/stream/%s?eventType=%s",
+							first.getString(EVENT_STREAM_NAME_FIELD), first.getString(EVENT_TYPE_FIELD)),
+						event);
 			});
 		}
 	}

@@ -4,6 +4,8 @@ import com.rethinkdb.RethinkDB;
 import com.rethinkdb.model.MapObject;
 import com.rethinkdb.net.Connection;
 import eventstore.shared.AbstractEventPersistenceVerticle;
+import eventstore.shared.constants.MessageFields;
+import eventstore.shared.constants.Messages;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;
@@ -11,6 +13,9 @@ import io.vertx.core.json.JsonObject;
 
 import java.util.HashMap;
 import java.util.List;
+
+import static eventstore.shared.constants.MessageFields.*;
+import static eventstore.shared.constants.Messages.NOT_FOUND_MESSAGE;
 
 public class RethinkDBEventPersistenceVerticle extends AbstractEventPersistenceVerticle {
 	private static final RethinkDB r = RethinkDB.r;
@@ -41,19 +46,19 @@ public class RethinkDBEventPersistenceVerticle extends AbstractEventPersistenceV
 					final MapObject mapObject = RethinkUtils.getMapObjectFromJson(body);
 					final List<HashMap<String, Object>> items = r.db("eventstore").table("events")
 							.filter(mapObject)
-							.orderBy("createdAt")
+							.orderBy(EVENT_CREATED_AT_FIELD)
 							.run(conn);
 
 					if (items.isEmpty()) {
-						message.fail(404, new JsonObject().put("error", "not found").encodePrettily());
+						message.fail(404, new JsonObject().put(ERROR_FIELD, NOT_FOUND_MESSAGE).encodePrettily());
 					} else {
 						final JsonArray jsonArray = new JsonArray();
 						items.forEach(hashMap -> {
 							final JsonObject value = new JsonObject();
 							hashMap.forEach((o, o2) -> value.put((String) o, o2));
-							final JsonObject origData = value.getJsonObject("data").getJsonObject("map");
-							value.remove("data");
-							value.put("data", origData);
+							final JsonObject origData = value.getJsonObject(EVENT_DATA_FIELD).getJsonObject("map");
+							value.remove(EVENT_DATA_FIELD);
+							value.put(EVENT_DATA_FIELD, origData);
 							jsonArray.add(value);
 						});
 						future.complete(jsonArray);
@@ -71,7 +76,7 @@ public class RethinkDBEventPersistenceVerticle extends AbstractEventPersistenceV
 					message.reply(res.result());
 				} else {
 					//noinspection ThrowableResultOfMethodCallIgnored
-					message.fail(500, new JsonObject().put("error", res.cause().getMessage()).encodePrettily());
+					message.fail(500, new JsonObject().put(ERROR_FIELD, res.cause().getMessage()).encodePrettily());
 				}
 			});
 		};
@@ -103,7 +108,7 @@ public class RethinkDBEventPersistenceVerticle extends AbstractEventPersistenceV
 			if (ar.failed()) {
 				//noinspection ThrowableResultOfMethodCallIgnored
 				eventBus.send("read.idempotent.store.events.failed",
-						new JsonObject().put("error", ar.cause().getMessage()));
+						new JsonObject().put(ERROR_FIELD, ar.cause().getMessage()));
 			}
 		});
 	}
@@ -120,14 +125,14 @@ public class RethinkDBEventPersistenceVerticle extends AbstractEventPersistenceV
 			}
 			final MapObject mapObject = RethinkUtils.getMapObjectFromJson(body);
 			r.db("eventstore").table(collectionName).insert(mapObject).run(finalConn);
-			final String streamName = body.getString("streamName");
-			final String eventType = body.getString("eventType");
+			final String streamName = body.getString(EVENT_STREAM_NAME_FIELD);
+			final String eventType = body.getString(EVENT_TYPE_FIELD);
 			eventBus.publish(String.format("/stream/%s?eventType=%s", streamName, eventType), body);
 			logger.debug("wrote " + body.encode() + " to DB.");
 		} catch (final Exception e) {
 			logger.error("failed writing to db: ", e);
 			eventBus.send("write.store.events.failed",
-					new JsonObject().put("error", e.getMessage()));
+					new JsonObject().put(ERROR_FIELD, e.getMessage()));
 		} finally {
 			if (finalConn != null && finalConn.isOpen() && reconnected) {
 				finalConn.close();

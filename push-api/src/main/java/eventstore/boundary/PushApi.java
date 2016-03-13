@@ -1,5 +1,6 @@
 package eventstore.boundary;
 
+import eventstore.shared.constants.MessageFields;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
@@ -20,6 +21,10 @@ import java.util.Map;
 
 import static eventstore.shared.constants.Addresses.EVENT_SUBSCRIBE_ADDRESS;
 import static eventstore.shared.constants.Addresses.EVENT_UNSUBSCRIBE_ADDRESS;
+import static eventstore.shared.constants.MessageFields.EVENT_ADDRESS_FIELD;
+import static eventstore.shared.constants.MessageFields.EVENT_CLIENT_ID_FIELD;
+import static eventstore.shared.constants.SharedDataKeys.EVENTSTORE_CONFIG_MAP;
+import static eventstore.shared.constants.SharedDataKeys.STOMP_BRIDGE_ADDRESS_KEY;
 
 public class PushApi extends AbstractVerticle {
 	private Logger logger;
@@ -37,10 +42,10 @@ public class PushApi extends AbstractVerticle {
 
 	private void locateStompBridgeAndConnect(final EventBus eventBus) {
 		final SharedData sd = vertx.sharedData();
-		sd.<String, String>getClusterWideMap("eventstore-config", res -> {
+		sd.<String, String>getClusterWideMap(EVENTSTORE_CONFIG_MAP, res -> {
 			if (res.succeeded()) {
 				final AsyncMap<String, String> map = res.result();
-				map.get("stomp-bridge-address", resGet -> {
+				map.get(STOMP_BRIDGE_ADDRESS_KEY, resGet -> {
 					if (resGet.succeeded()) {
 						// Successfully got the value
 						final String stompAddress = resGet.result();
@@ -57,8 +62,8 @@ public class PushApi extends AbstractVerticle {
 						eventBus.consumer(EVENT_SUBSCRIBE_ADDRESS, message -> {
 							logger.debug(String.format("subscribing %s", message.body()));
 							final JsonObject body = (JsonObject) message.body();
-							final String address = (String) body.remove("address");
-							final String clientId = (String) body.remove("clientId");
+							final String address = (String) body.remove(EVENT_ADDRESS_FIELD);
+							final String clientId = (String) body.remove(EVENT_CLIENT_ID_FIELD);
 							logger.debug(String.format("creating changefeed for: %s at %s with body %s", clientId, address, body.encode()));
 
 							clientToAddress.put(clientId, address);
