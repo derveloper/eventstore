@@ -58,7 +58,7 @@ public class StompBridgeTest {
 	}
 
 	@Test
-	public void shouldPublishEventOverSTOMP(final TestContext context) throws InterruptedException {
+	public void shouldPublishEventOverSTOMP(final TestContext context) {
 		final JsonObject data = new JsonObject().put("foo", "bar");
 		final String eventType = UUID.randomUUID().toString();
 		final String json = new JsonObject()

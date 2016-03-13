@@ -23,14 +23,12 @@ public class CassandraEventPersistenceVerticle extends AbstractEventPersistenceV
 	public void start() throws Exception {
 		super.start();
 		vertx.executeBlocking(objectFuture -> {
-			try {
-				connectToCassandra();
-				objectFuture.succeeded();
-			} catch (final InterruptedException ignored) { }
+			connectToCassandra();
+			objectFuture.succeeded();
 		}, tAsyncResult -> { });
 	}
 
-	private void connectToCassandra() throws InterruptedException {
+	private void connectToCassandra() {
 		try {
 			Thread.sleep(2000);
 			System.out.println("connecting...");

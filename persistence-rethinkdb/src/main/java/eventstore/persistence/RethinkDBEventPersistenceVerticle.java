@@ -4,8 +4,6 @@ import com.rethinkdb.RethinkDB;
 import com.rethinkdb.model.MapObject;
 import com.rethinkdb.net.Connection;
 import eventstore.shared.AbstractEventPersistenceVerticle;
-import eventstore.shared.constants.MessageFields;
-import eventstore.shared.constants.Messages;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonArray;

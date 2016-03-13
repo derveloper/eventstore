@@ -11,7 +11,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class InMemoryEventPersistenceVerticle extends AbstractEventPersistenceVerticle {
-	private List<JsonObject> store = new LinkedList<>();
+	private final List<JsonObject> store = new LinkedList<>();
 
 	@Override
 	protected Handler<Message<Object>> writeStoreEventsConsumer() {

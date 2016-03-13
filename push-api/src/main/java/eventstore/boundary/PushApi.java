@@ -1,6 +1,5 @@
 package eventstore.boundary;
 
-import eventstore.shared.constants.MessageFields;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
@@ -29,8 +28,8 @@ import static eventstore.shared.constants.SharedDataKeys.STOMP_BRIDGE_ADDRESS_KE
 public class PushApi extends AbstractVerticle {
 	private Logger logger;
 	private StompClientConnection stompClientConnection;
-	private Map<String, Map.Entry<MessageConsumer<Object>, Integer>> subscriptions = new LinkedHashMap<>();
-	private Map<String, String> clientToAddress = new LinkedHashMap<>();
+	private final Map<String, Map.Entry<MessageConsumer<Object>, Integer>> subscriptions = new LinkedHashMap<>();
+	private final Map<String, String> clientToAddress = new LinkedHashMap<>();
 
 	@Override
 	public void start() throws Exception {

@@ -1,7 +1,5 @@
 package eventstore.boundary;
 
-import eventstore.shared.constants.MessageFields;
-import eventstore.shared.constants.SharedDataKeys;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
