@@ -5,10 +5,13 @@ import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.core.shareddata.AsyncMap;
+import io.vertx.core.shareddata.SharedData;
 import io.vertx.ext.stomp.StompServer;
 import io.vertx.ext.stomp.StompServerHandler;
 
 import java.io.UnsupportedEncodingException;
+import java.net.Inet4Address;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
@@ -38,6 +41,7 @@ public class StompBridge extends AbstractVerticle {
 		final EventBus eventBus = vertx.eventBus();
 		final Integer localPort = config().getInteger("stomp.port", 8091);
 		final StompServerHandler stompServerHandler = StompServerHandler.create(vertx);
+		String hostAddress = Inet4Address.getLocalHost().getHostAddress();
 		final StompServer stompServer = StompServer.create(vertx)
 				.handler(stompServerHandler
 						.closeHandler(stompServerConnection -> eventBus.send(EVENT_UNSUBSCRIBE_ADDRESS, stompServerConnection.session()))
@@ -65,7 +69,25 @@ public class StompBridge extends AbstractVerticle {
 							}
 						})
 				)
-				.listen(localPort, "0.0.0.0");
-		logger.info(String.format("STOMP listening on %d", stompServer.actualPort()));
+				.listen(localPort, hostAddress);
+
+		SharedData sd = vertx.sharedData();
+
+		sd.<String, String>getClusterWideMap("eventstore-config", res -> {
+			if (res.succeeded()) {
+				AsyncMap<String, String> map = res.result();
+				map.put("stomp-bridge-address", hostAddress, resPut -> {
+					if(resPut.succeeded()) {
+						logger.info(String.format("putted address %s", hostAddress));
+					}
+					else {
+						logger.error("failed setting bridge address");
+					}
+				});
+			} else {
+				logger.error("failed setting bridge address");
+			}
+		});
+		logger.info(String.format("STOMP listening on %s:%d", hostAddress, stompServer.actualPort()));
 	}
 }

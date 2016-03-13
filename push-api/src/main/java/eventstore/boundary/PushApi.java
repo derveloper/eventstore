@@ -7,6 +7,8 @@ import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.core.shareddata.AsyncMap;
+import io.vertx.core.shareddata.SharedData;
 import io.vertx.ext.stomp.Frame;
 import io.vertx.ext.stomp.StompClient;
 import io.vertx.ext.stomp.StompClientConnection;
@@ -30,63 +32,90 @@ public class PushApi extends AbstractVerticle {
 		logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
 		final EventBus eventBus = vertx.eventBus();
 
-		final Integer stompPort = config().getInteger("stomp.port", 8091);
-		if (stompPort != null) {
-			createStompClient(stompPort);
-		}
+		locateStompBridgeAndConnect(eventBus);
+	}
 
-		eventBus.consumer(EVENT_SUBSCRIBE_ADDRESS, message -> {
-			logger.debug(String.format("subscribing %s", message.body()));
-			final JsonObject body = (JsonObject) message.body();
-			final String address = (String) body.remove("address");
-			final String clientId = (String) body.remove("clientId");
-			logger.debug(String.format("creating changefeed for: %s at %s with body %s", clientId, address, body.encode()));
+	private void locateStompBridgeAndConnect(EventBus eventBus) {
+		SharedData sd = vertx.sharedData();
+		sd.<String, String>getClusterWideMap("eventstore-config", res -> {
+			if (res.succeeded()) {
+				AsyncMap<String, String> map = res.result();
+				map.get("stomp-bridge-address", resGet -> {
+					if (resGet.succeeded()) {
+						// Successfully got the value
+						String stompAddress = resGet.result();
+						if(stompAddress == null) {
+							locateStompBridgeAndConnect(eventBus);
+							return;
+						}
+						logger.info(String.format("got stomp-address %s", stompAddress));
+						final Integer stompPort = config().getInteger("stomp.port", 8091);
+						if (stompPort != null) {
+							createStompClient(stompAddress, stompPort);
+						}
 
-			clientToAddress.put(clientId, address);
-			if(subscriptions.containsKey(address)) {
-				subscriptions.get(address).setValue(subscriptions.get(address).getValue() + 1);
-				return;
-			}
+						eventBus.consumer(EVENT_SUBSCRIBE_ADDRESS, message -> {
+							logger.debug(String.format("subscribing %s", message.body()));
+							final JsonObject body = (JsonObject) message.body();
+							final String address = (String) body.remove("address");
+							final String clientId = (String) body.remove("clientId");
+							logger.debug(String.format("creating changefeed for: %s at %s with body %s", clientId, address, body.encode()));
 
-			MessageConsumer<Object> consumer = eventBus.consumer(address, objectMessage -> {
-				final Frame frame = new Frame();
-				frame.setCommand(Frame.Command.SEND);
-				frame.setDestination(address);
-				frame.setBody(Buffer.buffer(((JsonObject) objectMessage.body()).encodePrettily()));
-				stompClientConnection.send(frame);
-				logger.debug(String.format("publishing to: %s", frame));
-			});
-			subscriptions.put(address, new AbstractMap.SimpleEntry<>(consumer, 0));
-		});
+							clientToAddress.put(clientId, address);
+							if(subscriptions.containsKey(address)) {
+								subscriptions.get(address).setValue(subscriptions.get(address).getValue() + 1);
+								return;
+							}
 
-		eventBus.consumer(EVENT_UNSUBSCRIBE_ADDRESS, message -> {
-			logger.debug(String.format("unsubscribing %s", message.body()));
-			final String clientId = (String) message.body();
-			final String address = clientToAddress.get(clientId);
-			if(subscriptions.containsKey(address)) {
-				subscriptions.get(address).setValue(subscriptions.get(address).getValue() - 1);
-				if(subscriptions.get(address).getValue() == 0) {
-					subscriptions.get(address).getKey().unregister();
-					subscriptions.remove(address);
-				}
+							MessageConsumer<Object> consumer = eventBus.consumer(address, objectMessage -> {
+								final Frame frame = new Frame();
+								frame.setCommand(Frame.Command.SEND);
+								frame.setDestination(address);
+								frame.setBody(Buffer.buffer(((JsonObject) objectMessage.body()).encodePrettily()));
+								stompClientConnection.send(frame);
+								logger.debug(String.format("publishing to: %s", frame));
+							});
+							subscriptions.put(address, new AbstractMap.SimpleEntry<>(consumer, 0));
+						});
+
+						eventBus.consumer(EVENT_UNSUBSCRIBE_ADDRESS, message -> {
+							logger.debug(String.format("unsubscribing %s", message.body()));
+							final String clientId = (String) message.body();
+							final String address = clientToAddress.get(clientId);
+							if(subscriptions.containsKey(address)) {
+								subscriptions.get(address).setValue(subscriptions.get(address).getValue() - 1);
+								if(subscriptions.get(address).getValue() == 0) {
+									subscriptions.get(address).getKey().unregister();
+									subscriptions.remove(address);
+								}
+							}
+						});
+					} else {
+						logger.error("failed getting stomp-address", resGet.cause());
+						locateStompBridgeAndConnect(eventBus);
+					}
+				});
+			} else {
+				logger.error("failed getting stomp-address", res.cause());
+				locateStompBridgeAndConnect(eventBus);
 			}
 		});
 	}
 
-	private void createStompClient(Integer stompPort) {
+	private void createStompClient(String address, Integer stompPort) {
 		StompClient.create(vertx, new StompClientOptions()
 				.setHeartbeat(new JsonObject().put("x", 1000).put("y", 0))
-				.setHost("0.0.0.0").setPort(stompPort)
+				.setHost(address).setPort(stompPort)
 		).connect(ar -> {
 			if (ar.succeeded()) {
-				logger.debug("connected to STOMP");
+				logger.info("connected to STOMP");
 				stompClientConnection = ar.result();
 				stompClientConnection.closeHandler(stompClientConnection -> {
-					logger.debug("connection close");
-					createStompClient(stompPort);
+					logger.info("connection close");
+					createStompClient(address, stompPort);
 				});
 			} else {
-				logger.warn("could not connect to STOMP", ar.cause());
+				logger.error("could not connect to STOMP", ar.cause());
 			}
 		});
 	}
