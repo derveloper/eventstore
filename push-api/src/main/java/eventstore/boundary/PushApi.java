@@ -30,7 +30,7 @@ public class PushApi extends AbstractVerticle {
 		logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
 		final EventBus eventBus = vertx.eventBus();
 
-		final Integer stompPort = config().getInteger("stomp.port");
+		final Integer stompPort = config().getInteger("stomp.port", 8091);
 		if (stompPort != null) {
 			createStompClient(stompPort);
 		}

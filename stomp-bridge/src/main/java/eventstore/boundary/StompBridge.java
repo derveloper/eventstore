@@ -36,7 +36,7 @@ public class StompBridge extends AbstractVerticle {
 	public void start() throws Exception {
 		logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
 		final EventBus eventBus = vertx.eventBus();
-		final Integer localPort = config().getInteger("stomp.port");
+		final Integer localPort = config().getInteger("stomp.port", 8091);
 		final StompServerHandler stompServerHandler = StompServerHandler.create(vertx);
 		final StompServer stompServer = StompServer.create(vertx)
 				.handler(stompServerHandler
