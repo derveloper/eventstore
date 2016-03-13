@@ -23,7 +23,7 @@ import java.util.Map;
 import static eventstore.constants.Addresses.READ_EVENTS_ADDRESS;
 import static eventstore.constants.Addresses.WRITE_EVENTS_ADDRESS;
 
-public class ApiRouter extends AbstractVerticle {
+public class HttpApi extends AbstractVerticle {
 	private EventBus eventBus;
 	private Logger logger;
 

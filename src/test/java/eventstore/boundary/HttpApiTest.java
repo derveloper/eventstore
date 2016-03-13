@@ -20,7 +20,7 @@ import java.util.UUID;
 import static eventstore.boundary.Helper.deployBlocking;
 
 @RunWith(VertxUnitRunner.class)
-public class ApiRouterTest {
+public class HttpApiTest {
 	private static final String TEST_URL = "/stream/test";
 	private Vertx vertx;
 	private int port;
@@ -36,7 +36,7 @@ public class ApiRouterTest {
 		deployBlocking(vertx, context, new JsonObject(), EventCacheVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), WriteEventsVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), ReadEventsVerticle.class.getName());
-		deployBlocking(vertx, context, new JsonObject().put("http.port", port), ApiRouter.class.getName());
+		deployBlocking(vertx, context, new JsonObject().put("http.port", port), HttpApi.class.getName());
 	}
 
 	@After

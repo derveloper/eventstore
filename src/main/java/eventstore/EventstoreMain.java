@@ -1,6 +1,6 @@
 package eventstore;
 
-import eventstore.boundary.ApiRouter;
+import eventstore.boundary.HttpApi;
 import eventstore.boundary.PushApi;
 import eventstore.boundary.StompBridge;
 import eventstore.control.*;
@@ -28,7 +28,7 @@ class EventstoreMain {
 					vertx.deployVerticle(new RethinkDBEventPersistenceVerticle());
 					vertx.deployVerticle(new WriteEventsVerticle());
 					vertx.deployVerticle(new ReadEventsVerticle());
-					vertx.deployVerticle(new ApiRouter());
+					vertx.deployVerticle(new HttpApi());
 				}
 			});
 		} catch (final IOException e) {

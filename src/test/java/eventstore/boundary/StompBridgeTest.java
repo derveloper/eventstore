@@ -46,7 +46,7 @@ public class StompBridgeTest {
 		deployBlocking(vertx, context, new JsonObject(), InMemoryEventPersistenceVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), WriteEventsVerticle.class.getName());
 		deployBlocking(vertx, context, new JsonObject(), ReadEventsVerticle.class.getName());
-		deployBlocking(vertx, context, new JsonObject().put("http.port", port), ApiRouter.class.getName());
+		deployBlocking(vertx, context, new JsonObject().put("http.port", port), HttpApi.class.getName());
 	}
 
 	@After
