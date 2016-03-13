@@ -16,7 +16,7 @@ class EmbeddedCassandraVerticle extends AbstractVerticle {
         vertx.executeBlocking(objectFuture -> {
             try {
                 cassandra.start();
-            } catch (IOException e) {
+            } catch (final IOException e) {
                 e.printStackTrace();
             }
         }, tAsyncResult -> { });

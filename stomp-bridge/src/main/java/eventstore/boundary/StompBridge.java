@@ -41,7 +41,7 @@ public class StompBridge extends AbstractVerticle {
 		final EventBus eventBus = vertx.eventBus();
 		final Integer localPort = config().getInteger("stomp.port", 8091);
 		final StompServerHandler stompServerHandler = StompServerHandler.create(vertx);
-		String hostAddress = Inet4Address.getLocalHost().getHostAddress();
+		final String hostAddress = Inet4Address.getLocalHost().getHostAddress();
 		final StompServer stompServer = StompServer.create(vertx)
 				.handler(stompServerHandler
 						.closeHandler(stompServerConnection -> eventBus.send(EVENT_UNSUBSCRIBE_ADDRESS, stompServerConnection.session()))
@@ -71,11 +71,11 @@ public class StompBridge extends AbstractVerticle {
 				)
 				.listen(localPort, hostAddress);
 
-		SharedData sd = vertx.sharedData();
+		final SharedData sd = vertx.sharedData();
 
 		sd.<String, String>getClusterWideMap("eventstore-config", res -> {
 			if (res.succeeded()) {
-				AsyncMap<String, String> map = res.result();
+				final AsyncMap<String, String> map = res.result();
 				map.put("stomp-bridge-address", hostAddress, resPut -> {
 					if(resPut.succeeded()) {
 						logger.info(String.format("putted address %s", hostAddress));

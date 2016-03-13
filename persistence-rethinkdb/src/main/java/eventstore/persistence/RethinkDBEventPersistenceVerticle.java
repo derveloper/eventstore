@@ -120,8 +120,8 @@ public class RethinkDBEventPersistenceVerticle extends AbstractEventPersistenceV
 			}
 			final MapObject mapObject = RethinkUtils.getMapObjectFromJson(body);
 			r.db("eventstore").table(collectionName).insert(mapObject).run(finalConn);
-			String streamName = body.getString("streamName");
-			String eventType = body.getString("eventType");
+			final String streamName = body.getString("streamName");
+			final String eventType = body.getString("eventType");
 			eventBus.publish(String.format("/stream/%s?eventType=%s", streamName, eventType), body);
 			logger.debug("wrote " + body.encode() + " to DB.");
 		} catch (final Exception e) {

@@ -90,7 +90,7 @@ public class StompBridgeTest {
 						vertx.executeBlocking(fut -> {
 							try {
 								Thread.sleep(1000);
-							} catch (InterruptedException e) {
+							} catch (final InterruptedException e) {
 								e.printStackTrace();
 							}
 							vertx.createHttpClient().post(port, "localhost", testUrl(eventType))

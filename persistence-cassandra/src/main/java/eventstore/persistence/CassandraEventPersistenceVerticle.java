@@ -24,7 +24,7 @@ public class CassandraEventPersistenceVerticle extends AbstractEventPersistenceV
 			try {
 				connectToCassandra();
 				objectFuture.succeeded();
-			} catch (InterruptedException ignored) { }
+			} catch (final InterruptedException ignored) { }
 		}, tAsyncResult -> { });
 	}
 
@@ -32,15 +32,15 @@ public class CassandraEventPersistenceVerticle extends AbstractEventPersistenceV
 		try {
 			Thread.sleep(2000);
 			System.out.println("connecting...");
-			Cluster cluster = Cluster.builder()
+			final Cluster cluster = Cluster.builder()
 					.addContactPointsWithPorts(new InetSocketAddress("127.0.0.1", 9042))
 					.withReconnectionPolicy(new ConstantReconnectionPolicy(200))
 					.withSocketOptions(new SocketOptions().setConnectTimeoutMillis(10000))
 					.build();
-			Metadata metadata = cluster.getMetadata();
+			final Metadata metadata = cluster.getMetadata();
 			System.out.printf("Connected to cluster: %s\n",
 					metadata.getClusterName());
-			for (Host host : metadata.getAllHosts()) {
+			for (final Host host : metadata.getAllHosts()) {
 				System.out.printf("Datacenter: %s; Host: %s; Rack: %s\n",
 						host.getDatacenter(), host.getAddress(), host.getRack());
 			}
@@ -61,7 +61,7 @@ public class CassandraEventPersistenceVerticle extends AbstractEventPersistenceV
 							"VALUES (?, ?, ?, ?);");
 			queryByEventType = session.prepare("SELECT * FROM simplex.eventlog where eventType = ?;");
 		}
-		catch (Exception e) {
+		catch (final Exception e) {
 			System.out.println(e.getMessage());
 			System.out.println("connect retry...");
 			connectToCassandra();
@@ -83,19 +83,19 @@ public class CassandraEventPersistenceVerticle extends AbstractEventPersistenceV
 			final JsonObject body = (JsonObject) message.body();
 			logger.debug(String.format("consume read.persisted.events: %s", body.encodePrettily()));
 
-			String eventType = body.getString("eventType");
+			final String eventType = body.getString("eventType");
 
-			ResultSet results;
+			final ResultSet results;
 			if(StringUtils.isNotEmpty(eventType)) {
-				BoundStatement boundStatement = new BoundStatement(queryByEventType);
+				final BoundStatement boundStatement = new BoundStatement(queryByEventType);
 				results = session.execute(boundStatement.bind(eventType));
 			}
 			else {
 				results = session.execute("SELECT * FROM simplex.eventlog;");
 			}
-			JsonArray response = new JsonArray();
-			for (Row row : results) {
-				JsonObject obj = new JsonObject()
+			final JsonArray response = new JsonArray();
+			for (final Row row : results) {
+				final JsonObject obj = new JsonObject()
 						.put("id", row.getUUID("id").toString())
 						.put("createdAt", Integer.valueOf(row.getString("createdAt")))
 						.put("eventType", row.getString("eventType"))
@@ -111,10 +111,10 @@ public class CassandraEventPersistenceVerticle extends AbstractEventPersistenceV
 	private void saveEventIfNotDuplicated(final JsonArray body) {
 		logger.debug(String.format("persisted %s", body.encodePrettily()));
 		if(!body.isEmpty()) {
-			JsonObject first = body.getJsonObject(0);
+			final JsonObject first = body.getJsonObject(0);
 			body.forEach(o -> {
-				JsonObject event = (JsonObject) o;
-				BoundStatement boundStatement = new BoundStatement(statement);
+				final JsonObject event = (JsonObject) o;
+				final BoundStatement boundStatement = new BoundStatement(statement);
 				session.executeAsync(boundStatement.bind(
 						UUID.fromString(event.getString("id")),
 						String.valueOf(event.getInteger("createdAt")),

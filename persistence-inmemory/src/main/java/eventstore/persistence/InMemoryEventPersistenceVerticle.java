@@ -37,7 +37,7 @@ public class InMemoryEventPersistenceVerticle extends AbstractEventPersistenceVe
 		store.addAll(body.getList());
 		logger.debug(String.format("persisted %s", body.encodePrettily()));
 		if(!body.isEmpty()) {
-			JsonObject first = body.getJsonObject(0);
+			final JsonObject first = body.getJsonObject(0);
 			eventBus.publish(String.format("/stream/%s?eventType=%s", first.getString("streamName"), first.getString("eventType")), body);
 		}
 	}

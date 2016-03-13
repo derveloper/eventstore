@@ -35,15 +35,15 @@ public class PushApi extends AbstractVerticle {
 		locateStompBridgeAndConnect(eventBus);
 	}
 
-	private void locateStompBridgeAndConnect(EventBus eventBus) {
-		SharedData sd = vertx.sharedData();
+	private void locateStompBridgeAndConnect(final EventBus eventBus) {
+		final SharedData sd = vertx.sharedData();
 		sd.<String, String>getClusterWideMap("eventstore-config", res -> {
 			if (res.succeeded()) {
-				AsyncMap<String, String> map = res.result();
+				final AsyncMap<String, String> map = res.result();
 				map.get("stomp-bridge-address", resGet -> {
 					if (resGet.succeeded()) {
 						// Successfully got the value
-						String stompAddress = resGet.result();
+						final String stompAddress = resGet.result();
 						if(stompAddress == null) {
 							locateStompBridgeAndConnect(eventBus);
 							return;
@@ -67,7 +67,7 @@ public class PushApi extends AbstractVerticle {
 								return;
 							}
 
-							MessageConsumer<Object> consumer = eventBus.consumer(address, objectMessage -> {
+							final MessageConsumer<Object> consumer = eventBus.consumer(address, objectMessage -> {
 								final Frame frame = new Frame();
 								frame.setCommand(Frame.Command.SEND);
 								frame.setDestination(address);
@@ -102,7 +102,7 @@ public class PushApi extends AbstractVerticle {
 		});
 	}
 
-	private void createStompClient(String address, Integer stompPort) {
+	private void createStompClient(final String address, final Integer stompPort) {
 		StompClient.create(vertx, new StompClientOptions()
 				.setHeartbeat(new JsonObject().put("x", 1000).put("y", 0))
 				.setHost(address).setPort(stompPort)
