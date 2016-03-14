@@ -43,10 +43,12 @@ public class StompBridgeTest {
     port2 = socket2.getLocalPort();
     socket2.close();
 
-    deployBlocking(vertx, context, new JsonObject().put("stomp.port", port2).put("stomp.address", "0.0.0.0"), StompBridge.class.getName());
+    deployBlocking(vertx, context, new JsonObject().put("stomp.port", port2).put("stomp.address", "0.0.0.0"),
+                   StompBridge.class.getName());
     deployBlocking(vertx, context,
-                   new DeploymentOptions().setConfig(new JsonObject().put("stomp.port", port2).put("stomp.address", "localhost"))
-                                          .setWorker(true), PushApi.class.getName());
+                   new DeploymentOptions()
+                       .setConfig(new JsonObject().put("stomp.port", port2).put("stomp.address", "localhost"))
+                       .setWorker(true), PushApi.class.getName());
     deployBlocking(vertx, context, new JsonObject(), EventCacheVerticle.class.getName());
     deployBlocking(vertx, context, new JsonObject(), InMemoryEventPersistenceVerticle.class.getName());
     deployBlocking(vertx, context, new JsonObject(), WriteEventsVerticle.class.getName());
@@ -84,7 +86,8 @@ public class StompBridgeTest {
                                           System.out.println("received frame: " + frame);
                                           context.assertEquals(
                                               new JsonObject(json).getJsonObject("data"),
-                                              new JsonArray(frame.getBodyAsString()).getJsonObject(0).getJsonObject("data"));
+                                              new JsonArray(frame.getBodyAsString()).getJsonObject(0)
+                                                                                    .getJsonObject("data"));
                                           async.complete();
                                           connection.disconnect();
                                           connection.close();

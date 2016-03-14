@@ -13,7 +13,8 @@ class Helper {
     deployBlocking(vertx, context, stompConfig.getConfig(), deployUnit);
   }
 
-  public static void deployBlocking(final Vertx vertx, final TestContext context, final JsonObject stompConfig, final String deployUnit)
+  public static void deployBlocking(final Vertx vertx, final TestContext context, final JsonObject stompConfig,
+                                    final String deployUnit)
       throws InterruptedException {
     final Async async = context.async();
     vertx.deployVerticle(deployUnit, new DeploymentOptions().setConfig(stompConfig), stringAsyncResult -> {

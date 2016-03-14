@@ -47,30 +47,38 @@ public class StompBridge extends AbstractVerticle {
     final StompServer stompServer = StompServer.create(vertx)
                                                .handler(stompServerHandler
                                                             .closeHandler(stompServerConnection -> eventBus
-                                                                .send(EVENT_UNSUBSCRIBE_ADDRESS, stompServerConnection.session()))
+                                                                .send(EVENT_UNSUBSCRIBE_ADDRESS,
+                                                                      stompServerConnection.session()))
                                                             .subscribeHandler(serverFrame -> {
                                                               String destination = serverFrame.frame().getDestination();
                                                               try {
                                                                 final URI uri = new URI(destination.trim());
                                                                 final JsonObject query = uri.toString().contains("?")
-                                                                                         ? new JsonObject(splitQuery(uri))
+                                                                                         ? new JsonObject(
+                                                                    splitQuery(uri))
                                                                                          : new JsonObject();
                                                                 final String[] split = uri.getPath().split("/");
 
                                                                 if (split.length != 3) {
-                                                                  throw new URISyntaxException(uri.getPath(), "no stream specified");
+                                                                  throw new URISyntaxException(uri.getPath(),
+                                                                                               "no stream specified");
                                                                 }
 
                                                                 query.put(EVENT_STREAM_NAME_FIELD, split[2]);
                                                                 query.put(EVENT_ADDRESS_FIELD, destination.trim());
-                                                                query.put(EVENT_CLIENT_ID_FIELD, serverFrame.connection().session());
+                                                                query.put(EVENT_CLIENT_ID_FIELD,
+                                                                          serverFrame.connection().session());
 
-                                                                logger.debug(String.format("subscribing: %s", query.encodePrettily()));
+                                                                logger.debug(String.format("subscribing: %s",
+                                                                                           query.encodePrettily()));
                                                                 eventBus.send(EVENT_SUBSCRIBE_ADDRESS, query);
-                                                                stompServerHandler.getOrCreateDestination(destination.trim())
-                                                                                  .subscribe(serverFrame.connection(), serverFrame.frame());
+                                                                stompServerHandler
+                                                                    .getOrCreateDestination(destination.trim())
+                                                                    .subscribe(serverFrame.connection(),
+                                                                               serverFrame.frame());
                                                               }
-                                                              catch (UnsupportedEncodingException | URISyntaxException e) {
+                                                              catch (UnsupportedEncodingException |
+                                                                  URISyntaxException e) {
                                                                 logger.error("invalid URI format", e);
                                                               }
                                                             })
@@ -106,7 +114,8 @@ public class StompBridge extends AbstractVerticle {
     final String[] pairs = query.split("&");
     for (final String pair : pairs) {
       final int idx = pair.indexOf("=");
-      query_pairs.put(URLDecoder.decode(pair.substring(0, idx), "UTF-8"), URLDecoder.decode(pair.substring(idx + 1), "UTF-8"));
+      query_pairs
+          .put(URLDecoder.decode(pair.substring(0, idx), "UTF-8"), URLDecoder.decode(pair.substring(idx + 1), "UTF-8"));
     }
     return query_pairs;
   }

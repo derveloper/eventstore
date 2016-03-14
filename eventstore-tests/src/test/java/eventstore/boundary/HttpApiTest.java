@@ -152,15 +152,16 @@ public class HttpApiTest {
              e.printStackTrace();
            }
            response.bodyHandler(
-               buffer -> vertx.createHttpClient().get(port, "localhost", testUrl(eventType) + "?eventType=" + eventType, response2 -> {
-                 context.assertEquals(response2.statusCode(), 200);
-                 context.assertEquals(response2.headers().get("content-type"), "application/json");
-                 response2.bodyHandler(body2 -> {
-                   final JsonArray jsonArray = new JsonArray(body2.toString());
-                   context.assertTrue(jsonArray.getJsonObject(0).getJsonObject("data").equals(data));
-                   async.complete();
-                 });
-               }).exceptionHandler(throwable -> context.asyncAssertFailure()).end());
+               buffer -> vertx.createHttpClient()
+                              .get(port, "localhost", testUrl(eventType) + "?eventType=" + eventType, response2 -> {
+                                context.assertEquals(response2.statusCode(), 200);
+                                context.assertEquals(response2.headers().get("content-type"), "application/json");
+                                response2.bodyHandler(body2 -> {
+                                  final JsonArray jsonArray = new JsonArray(body2.toString());
+                                  context.assertTrue(jsonArray.getJsonObject(0).getJsonObject("data").equals(data));
+                                  async.complete();
+                                });
+                              }).exceptionHandler(throwable -> context.asyncAssertFailure()).end());
          })
          .write(json)
          .exceptionHandler(throwable -> context.asyncAssertFailure())
