@@ -5,20 +5,22 @@ import org.apache.cassandra.service.EmbeddedCassandraService;
 
 import java.io.IOException;
 
+
 class EmbeddedCassandraVerticle extends AbstractVerticle {
-    private final EmbeddedCassandraService cassandra;
+  private final EmbeddedCassandraService cassandra;
 
-    EmbeddedCassandraVerticle() {
-        cassandra = new EmbeddedCassandraService();
-    }
+  EmbeddedCassandraVerticle() {
+    cassandra = new EmbeddedCassandraService();
+  }
 
-    public void start() throws IOException {
-        vertx.executeBlocking(objectFuture -> {
-            try {
-                cassandra.start();
-            } catch (final IOException e) {
-                e.printStackTrace();
-            }
-        }, tAsyncResult -> { });
-    }
+  public void start() throws IOException {
+    vertx.executeBlocking(objectFuture -> {
+      try {
+        cassandra.start();
+      }
+      catch (final IOException e) {
+        e.printStackTrace();
+      }
+    }, tAsyncResult -> { });
+  }
 }

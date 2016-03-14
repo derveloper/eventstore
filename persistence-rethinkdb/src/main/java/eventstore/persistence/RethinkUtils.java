@@ -4,10 +4,11 @@ import com.rethinkdb.RethinkDB;
 import com.rethinkdb.model.MapObject;
 import io.vertx.core.json.JsonObject;
 
+
 class RethinkUtils {
-	static MapObject getMapObjectFromJson(final JsonObject body) {
-		final MapObject mapObject = RethinkDB.r.hashMap();
-		body.forEach(o -> mapObject.with(o.getKey(), o.getValue()));
-		return mapObject;
-	}
+  static MapObject getMapObjectFromJson(final JsonObject body) {
+    final MapObject mapObject = RethinkDB.r.hashMap();
+    body.forEach(o -> mapObject.with(o.getKey(), o.getValue()));
+    return mapObject;
+  }
 }
