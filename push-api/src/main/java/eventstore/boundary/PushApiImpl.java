@@ -1,5 +1,6 @@
 package eventstore.boundary;
 
+import eventstore.shared.service.PushApi;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
@@ -14,29 +15,32 @@ import io.vertx.ext.stomp.Frame;
 import io.vertx.ext.stomp.StompClient;
 import io.vertx.ext.stomp.StompClientConnection;
 import io.vertx.ext.stomp.StompClientOptions;
+import io.vertx.serviceproxy.ProxyHelper;
 
 import java.util.AbstractMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static eventstore.shared.constants.Addresses.EVENT_SUBSCRIBE_ADDRESS;
 import static eventstore.shared.constants.Addresses.EVENT_UNSUBSCRIBE_ADDRESS;
-import static eventstore.shared.constants.MessageFields.EVENT_ADDRESS_FIELD;
-import static eventstore.shared.constants.MessageFields.EVENT_CLIENT_ID_FIELD;
 import static eventstore.shared.constants.SharedDataKeys.EVENTSTORE_CONFIG_MAP;
 import static eventstore.shared.constants.SharedDataKeys.STOMP_BRIDGE_ADDRESS_KEY;
 
 
-public class PushApi extends AbstractVerticle {
+public class PushApiImpl extends AbstractVerticle implements PushApi {
   private final Map<String, Map.Entry<MessageConsumer<Object>, Integer>> subscriptions = new LinkedHashMap<>();
   private final Map<String, String> clientToAddress = new LinkedHashMap<>();
   private Logger logger;
   private StompClientConnection stompClientConnection;
+  private EventBus eventBus;
+
+  public PushApiImpl() {
+    ProxyHelper.registerService(PushApi.class, vertx, this, "push-api");
+  }
 
   @Override
   public void start() throws Exception {
     logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
-    final EventBus eventBus = vertx.eventBus();
+    eventBus = vertx.eventBus();
 
     locateStompBridgeAndConnect(eventBus);
   }
@@ -81,38 +85,6 @@ public class PushApi extends AbstractVerticle {
       createStompClient(stompAddress, stompPort);
     }
 
-    eventBus.consumer(EVENT_SUBSCRIBE_ADDRESS, message -> {
-      logger.debug(String.format("subscribing %s", message.body()));
-      final JsonObject body = (JsonObject) message.body();
-      final String address = (String) body.remove(EVENT_ADDRESS_FIELD);
-      final String clientId = (String) body.remove(EVENT_CLIENT_ID_FIELD);
-      logger.debug(String.format("creating changefeed for: %s at %s with body %s", clientId, address, body.encode()));
-
-      clientToAddress.put(clientId, address);
-      if (subscriptions.containsKey(address)) {
-        subscriptions.get(address).setValue(subscriptions.get(address).getValue() + 1);
-        return;
-      }
-
-      final MessageConsumer<Object> consumer = eventBus.consumer(address, objectMessage -> {
-        final Frame frame = new Frame();
-        frame.setCommand(Frame.Command.SEND);
-        frame.setDestination(address);
-        if (objectMessage.body() instanceof JsonObject) {
-          frame.setBody(Buffer.buffer(((JsonObject) objectMessage.body()).encodePrettily()));
-        }
-        else if (objectMessage.body() instanceof JsonArray) {
-          frame.setBody(Buffer.buffer(((JsonArray) objectMessage.body()).encodePrettily()));
-        }
-        else {
-          frame.setBody(Buffer.buffer());
-        }
-        stompClientConnection.send(frame);
-        logger.debug(String.format("publishing to: %s", frame));
-      });
-      subscriptions.put(address, new AbstractMap.SimpleEntry<>(consumer, 0));
-    });
-
     eventBus.consumer(EVENT_UNSUBSCRIBE_ADDRESS, message -> {
       logger.debug(String.format("unsubscribing %s", message.body()));
       final String clientId = (String) message.body();
@@ -127,23 +99,52 @@ public class PushApi extends AbstractVerticle {
     });
   }
 
+  public void subscribe(final String clientId, final String address) {
+    logger.debug(String.format("creating changefeed for: %s at %s", clientId, address));
+
+    clientToAddress.put(clientId, address);
+    if (subscriptions.containsKey(address)) {
+      subscriptions.get(address).setValue(subscriptions.get(address).getValue() + 1);
+      return;
+    }
+
+    final MessageConsumer<Object> consumer = eventBus.consumer(address, objectMessage -> {
+      final Frame frame = new Frame();
+      frame.setCommand(Frame.Command.SEND);
+      frame.setDestination(address);
+      if (objectMessage.body() instanceof JsonObject) {
+        frame.setBody(Buffer.buffer(((JsonObject) objectMessage.body()).encodePrettily()));
+      }
+      else if (objectMessage.body() instanceof JsonArray) {
+        frame.setBody(Buffer.buffer(((JsonArray) objectMessage.body()).encodePrettily()));
+      }
+      else {
+        frame.setBody(Buffer.buffer());
+      }
+      stompClientConnection.send(frame);
+      logger.debug(String.format("publishing to: %s", frame));
+    });
+    subscriptions.put(address, new AbstractMap.SimpleEntry<>(consumer, 0));
+  }
+
   private void createStompClient(final String address, final Integer stompPort) {
-    StompClient.create(vertx,
-                       new StompClientOptions()
-                           .setHeartbeat(new JsonObject().put("x", 1000).put("y", 0))
-                           .setHost(address).setPort(stompPort))
-               .connect(ar -> {
-                 if (ar.succeeded()) {
-                   logger.info("connected to STOMP");
-                   stompClientConnection = ar.result();
-                   stompClientConnection.closeHandler(stompClientConnection -> {
-                     logger.info("connection close");
-                     createStompClient(address, stompPort);
-                   });
-                 }
-                 else {
-                   logger.error("could not connect to STOMP", ar.cause());
-                 }
-               });
+    StompClient
+        .create(vertx,
+                new StompClientOptions()
+                    .setHeartbeat(new JsonObject().put("x", 1000).put("y", 0))
+                    .setHost(address).setPort(stompPort))
+        .connect(ar -> {
+          if (ar.succeeded()) {
+            logger.info("connected to STOMP");
+            stompClientConnection = ar.result();
+            stompClientConnection.closeHandler(stompClientConnection -> {
+              logger.info("connection close");
+              createStompClient(address, stompPort);
+            });
+          }
+          else {
+            logger.error("could not connect to STOMP", ar.cause());
+          }
+        });
   }
 }

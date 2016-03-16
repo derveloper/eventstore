@@ -1,5 +1,6 @@
 package eventstore.boundary;
 
+import eventstore.shared.service.PushApi;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
@@ -44,46 +45,46 @@ public class StompBridge extends AbstractVerticle {
       hostAddress = config().getString("stomp.address");
     }
 
-    final StompServer stompServer = StompServer.create(vertx)
-                                               .handler(stompServerHandler
-                                                            .closeHandler(stompServerConnection -> eventBus
-                                                                .send(EVENT_UNSUBSCRIBE_ADDRESS,
-                                                                      stompServerConnection.session()))
-                                                            .subscribeHandler(serverFrame -> {
-                                                              String destination = serverFrame.frame().getDestination();
-                                                              try {
-                                                                final URI uri = new URI(destination.trim());
-                                                                final JsonObject query = uri.toString().contains("?")
-                                                                                         ? new JsonObject(
-                                                                    splitQuery(uri))
-                                                                                         : new JsonObject();
-                                                                final String[] split = uri.getPath().split("/");
+    PushApi pushApi = PushApi.createProxy(vertx, "push-api");
 
-                                                                if (split.length != 3) {
-                                                                  throw new URISyntaxException(uri.getPath(),
-                                                                                               "no stream specified");
-                                                                }
+    final StompServer stompServer = StompServer
+        .create(vertx)
+        .handler(stompServerHandler
+                     .closeHandler(stompServerConnection -> eventBus
+                         .send(EVENT_UNSUBSCRIBE_ADDRESS,
+                               stompServerConnection.session()))
+                     .subscribeHandler(serverFrame -> {
+                       String destination = serverFrame.frame().getDestination();
+                       try {
+                         final URI uri = new URI(destination.trim());
+                         final JsonObject query = uri.toString().contains("?")
+                                                  ? new JsonObject(splitQuery(uri))
+                                                  : new JsonObject();
+                         final String[] split = uri.getPath().split("/");
 
-                                                                query.put(EVENT_STREAM_NAME_FIELD, split[2]);
-                                                                query.put(EVENT_ADDRESS_FIELD, destination.trim());
-                                                                query.put(EVENT_CLIENT_ID_FIELD,
-                                                                          serverFrame.connection().session());
+                         if (split.length != 3) {
+                           throw new URISyntaxException(uri.getPath(), "no stream specified");
+                         }
 
-                                                                logger.debug(String.format("subscribing: %s",
-                                                                                           query.encodePrettily()));
-                                                                eventBus.send(EVENT_SUBSCRIBE_ADDRESS, query);
-                                                                stompServerHandler
-                                                                    .getOrCreateDestination(destination.trim())
-                                                                    .subscribe(serverFrame.connection(),
-                                                                               serverFrame.frame());
-                                                              }
-                                                              catch (UnsupportedEncodingException |
-                                                                  URISyntaxException e) {
-                                                                logger.error("invalid URI format", e);
-                                                              }
-                                                            })
-                                                       )
-                                               .listen(localPort, hostAddress);
+                         query.put(EVENT_STREAM_NAME_FIELD, split[2]);
+                         query.put(EVENT_ADDRESS_FIELD, destination.trim());
+                         query.put(EVENT_CLIENT_ID_FIELD, serverFrame.connection().session());
+
+                         logger.debug(String.format("subscribing: %s", query.encodePrettily()));
+                         eventBus.send(EVENT_SUBSCRIBE_ADDRESS, query);
+                         pushApi.subscribe(serverFrame.connection().session(), destination.trim());
+                         stompServerHandler
+                             .getOrCreateDestination(destination.trim())
+                             .subscribe(serverFrame.connection(),
+                                        serverFrame.frame());
+                       }
+                       catch (UnsupportedEncodingException |
+                           URISyntaxException e) {
+                         logger.error("invalid URI format", e);
+                       }
+                     })
+                )
+        .listen(localPort, hostAddress);
     logger.info(String.format("STOMP listening on %s:%d", hostAddress, stompServer.actualPort()));
   }
 

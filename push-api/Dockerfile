@@ -1,6 +1,6 @@
 FROM vertx/vertx3
 
-ENV VERTICLE_NAME eventstore.boundary.PushApi
+ENV VERTICLE_NAME eventstore.boundary.PushApiImpl
 ENV VERTICLE_FILE target/*fat*.jar
 
 # Set the location of the verticles
