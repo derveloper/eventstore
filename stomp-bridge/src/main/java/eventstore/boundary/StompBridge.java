@@ -1,6 +1,5 @@
 package eventstore.boundary;
 
-import eventstore.shared.service.PushApi;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
@@ -50,9 +49,7 @@ public class StompBridge extends AbstractVerticle {
     final StompServer stompServer = StompServer
         .create(vertx)
         .handler(stompServerHandler
-                     .closeHandler(stompServerConnection -> eventBus
-                         .send(EVENT_UNSUBSCRIBE_ADDRESS,
-                               stompServerConnection.session()))
+                     .closeHandler(stompServerConnection -> pushApi.unsubscribe(stompServerConnection.session()))
                      .subscribeHandler(serverFrame -> {
                        String destination = serverFrame.frame().getDestination();
                        try {
@@ -73,6 +70,7 @@ public class StompBridge extends AbstractVerticle {
                          logger.debug(String.format("subscribing: %s", query.encodePrettily()));
                          eventBus.send(EVENT_SUBSCRIBE_ADDRESS, query);
                          pushApi.subscribe(serverFrame.connection().session(), destination.trim());
+                         System.out.println("subscribe");
                          stompServerHandler
                              .getOrCreateDestination(destination.trim())
                              .subscribe(serverFrame.connection(),

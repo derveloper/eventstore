@@ -48,7 +48,7 @@ public class StompBridgeTest {
     deployBlocking(vertx, context,
                    new DeploymentOptions()
                        .setConfig(new JsonObject().put("stomp.port", port2).put("stomp.address", "localhost"))
-                       .setWorker(true), PushApiImpl.class.getName());
+                       .setWorker(true), PushApiVerticle.class.getName());
     deployBlocking(vertx, context, new JsonObject(), EventCacheVerticle.class.getName());
     deployBlocking(vertx, context, new JsonObject(), InMemoryEventPersistenceVerticle.class.getName());
     deployBlocking(vertx, context, new JsonObject(), WriteEventsVerticle.class.getName());
