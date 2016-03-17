@@ -25,7 +25,6 @@ import static eventstore.shared.constants.MessageFields.*;
 
 
 public class HttpApi extends AbstractVerticle {
-  private EventBus eventBus;
   private Logger logger;
   private EventWriter eventWriter;
   private EventReader eventReader;
@@ -33,7 +32,6 @@ public class HttpApi extends AbstractVerticle {
   @Override
   public void start() throws Exception {
     logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
-    eventBus = vertx.eventBus();
     final HttpServer httpServer = vertx.createHttpServer();
     final Router router = Router.router(vertx);
     router.route().handler(BodyHandler.create());

@@ -3,13 +3,10 @@ package eventstore.writer;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.MessageConsumer;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.serviceproxy.ProxyHelper;
-
-import static eventstore.shared.constants.Addresses.*;
 
 
 public class WriteEventsVerticle extends AbstractVerticle {
