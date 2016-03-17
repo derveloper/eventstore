@@ -1,6 +1,7 @@
 package eventstore.boundary;
 
 import eventstore.shared.entity.PersistedEvent;
+import eventstore.writer.EventWriter;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
@@ -20,13 +21,13 @@ import io.vertx.ext.web.handler.BodyHandler;
 import java.util.Map;
 
 import static eventstore.shared.constants.Addresses.READ_EVENTS_ADDRESS;
-import static eventstore.shared.constants.Addresses.WRITE_EVENTS_ADDRESS;
 import static eventstore.shared.constants.MessageFields.*;
 
 
 public class HttpApi extends AbstractVerticle {
   private EventBus eventBus;
   private Logger logger;
+  private EventWriter eventWriter;
 
   @Override
   public void start() throws Exception {
@@ -35,11 +36,50 @@ public class HttpApi extends AbstractVerticle {
     final HttpServer httpServer = vertx.createHttpServer();
     final Router router = Router.router(vertx);
     router.route().handler(BodyHandler.create());
+    eventWriter = EventWriter.createProxy(vertx, "event-writer");
 
-    router.post("/stream/:streamName*").handler(sendMessage(WRITE_EVENTS_ADDRESS, false));
+    router.post("/stream/:streamName*").handler(writeEvents());
     router.get("/stream/:streamName*").handler(sendMessage(READ_EVENTS_ADDRESS, true));
 
     listen(httpServer, router);
+  }
+
+  private Handler<RoutingContext> writeEvents() {
+    return routingContext -> {
+      final String bodyAsString = routingContext.getBodyAsString();
+      final JsonArray events = new JsonArray();
+      final String streamName = routingContext.request().getParam(EVENT_STREAM_NAME_FIELD);
+
+      if (bodyAsString.trim().startsWith("[")) {
+        routingContext.getBodyAsJsonArray().forEach(o -> {
+          final JsonObject jsonObject = (JsonObject) o;
+          final PersistedEvent persistedEvent = new PersistedEvent(
+              jsonObject.getString(EVENT_ID_FIELD),
+              streamName,
+              jsonObject.getString(EVENT_TYPE_FIELD, "undefined"),
+              jsonObject.getJsonObject(EVENT_DATA_FIELD, new JsonObject()));
+          events.add(new JsonObject(Json.encode(persistedEvent)));
+        });
+      }
+      else {
+        final PersistedEvent persistedEvent = new PersistedEvent(
+            routingContext.getBodyAsJson().getString(EVENT_ID_FIELD),
+            streamName,
+            routingContext.getBodyAsJson().getString(EVENT_TYPE_FIELD, "undefined"),
+            routingContext.getBodyAsJson().getJsonObject(EVENT_DATA_FIELD, new JsonObject()));
+        events.add(new JsonObject(Json.encode(persistedEvent)));
+      }
+
+      eventWriter.write(events);
+
+      final int statusCode = HttpMethod.POST.equals(routingContext.request().method())
+                             ? HttpResponseStatus.CREATED.code()
+                             : HttpResponseStatus.NO_CONTENT.code();
+
+      final String responseBody = events.encodePrettily();
+      logger.debug(String.format("http optimistic response: %s", responseBody));
+      routingContext.response().setStatusCode(statusCode).end(responseBody);
+    };
   }
 
   private Handler<RoutingContext> sendMessage(final String address, final boolean respondWithReply) {
@@ -61,6 +101,7 @@ public class HttpApi extends AbstractVerticle {
 
         final String streamName = routingContext.request().getParam(EVENT_STREAM_NAME_FIELD);
         requestBody.put(EVENT_STREAM_NAME_FIELD, streamName);
+
         eventBus.send(address, requestBody, reply -> {
           if (reply.succeeded()) {
             final Object body = reply.result().body();
@@ -88,40 +129,6 @@ public class HttpApi extends AbstractVerticle {
             routingContext.response().setStatusCode(cause.failureCode()).end();
           }
         });
-      }
-      else {
-        final String bodyAsString = routingContext.getBodyAsString();
-        final JsonArray events = new JsonArray();
-        final String streamName = routingContext.request().getParam(EVENT_STREAM_NAME_FIELD);
-        if (bodyAsString.trim().startsWith("[")) {
-          routingContext.getBodyAsJsonArray().forEach(o -> {
-            final JsonObject jsonObject = (JsonObject) o;
-            final PersistedEvent persistedEvent = new PersistedEvent(
-                jsonObject.getString(EVENT_ID_FIELD),
-                streamName,
-                jsonObject.getString(EVENT_TYPE_FIELD, "undefined"),
-                jsonObject.getJsonObject(EVENT_DATA_FIELD, new JsonObject()));
-            events.add(new JsonObject(Json.encode(persistedEvent)));
-          });
-        }
-        else {
-          final PersistedEvent persistedEvent = new PersistedEvent(
-              routingContext.getBodyAsJson().getString(EVENT_ID_FIELD),
-              streamName,
-              routingContext.getBodyAsJson().getString(EVENT_TYPE_FIELD, "undefined"),
-              routingContext.getBodyAsJson().getJsonObject(EVENT_DATA_FIELD, new JsonObject()));
-          events.add(new JsonObject(Json.encode(persistedEvent)));
-        }
-
-        eventBus.send(address, events);
-
-        final int statusCode = HttpMethod.POST.equals(routingContext.request().method())
-                               ? HttpResponseStatus.CREATED.code()
-                               : HttpResponseStatus.NO_CONTENT.code();
-
-        final String responseBody = events.encodePrettily();
-        logger.debug(String.format("http optimistic response: %s", responseBody));
-        routingContext.response().setStatusCode(statusCode).end(responseBody);
       }
     };
   }

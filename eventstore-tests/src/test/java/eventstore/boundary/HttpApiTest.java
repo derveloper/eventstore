@@ -145,12 +145,6 @@ public class HttpApiTest {
          .handler(response -> {
            context.assertEquals(response.statusCode(), 201);
            context.assertTrue(response.headers().get("content-type").contains("application/json"));
-           try {
-             Thread.sleep(500);
-           }
-           catch (InterruptedException e) {
-             e.printStackTrace();
-           }
            response.bodyHandler(
                buffer -> vertx.createHttpClient()
                               .get(port, "localhost", testUrl(eventType) + "?eventType=" + eventType, response2 -> {

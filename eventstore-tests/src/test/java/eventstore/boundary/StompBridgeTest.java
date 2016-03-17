@@ -89,6 +89,7 @@ public class StompBridgeTest {
                                               new JsonArray(frame.getBodyAsString()).getJsonObject(0)
                                                                                     .getJsonObject("data"));
                                           async.complete();
+                                          context.asyncAssertSuccess();
                                           connection.disconnect();
                                           connection.close();
                                         });

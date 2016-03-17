@@ -13,20 +13,15 @@ import io.vertx.ext.stomp.StompClientConnection;
 import io.vertx.ext.stomp.StompClientOptions;
 import io.vertx.serviceproxy.ProxyHelper;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-import static eventstore.shared.constants.Addresses.EVENT_UNSUBSCRIBE_ADDRESS;
 import static eventstore.shared.constants.SharedDataKeys.EVENTSTORE_CONFIG_MAP;
 import static eventstore.shared.constants.SharedDataKeys.STOMP_BRIDGE_ADDRESS_KEY;
 
 
 public class PushApiVerticle extends AbstractVerticle {
-  private final Map<String, Map.Entry<MessageConsumer<Object>, Integer>> subscriptions = new LinkedHashMap<>();
-  private final Map<String, String> clientToAddress = new LinkedHashMap<>();
   private Logger logger;
   private StompClientConnection stompClientConnection;
   private EventBus eventBus;
+  private MessageConsumer<JsonObject> jsonObjectMessageConsumer;
 
   @Override
   public void start() throws Exception {
@@ -75,10 +70,6 @@ public class PushApiVerticle extends AbstractVerticle {
     if (stompPort != null) {
       createStompClient(stompAddress, stompPort);
     }
-
-    eventBus.consumer(EVENT_UNSUBSCRIBE_ADDRESS, message -> {
-
-    });
   }
 
   private void createStompClient(final String address, final Integer stompPort) {
@@ -96,11 +87,17 @@ public class PushApiVerticle extends AbstractVerticle {
               createStompClient(address, stompPort);
             });
             PushApiImpl service = new PushApiImpl(stompClientConnection, eventBus);
-            ProxyHelper.registerService(PushApi.class, vertx, service, "push-api");
+            jsonObjectMessageConsumer = ProxyHelper.registerService(PushApi.class, vertx, service, "push-api");
           }
           else {
             logger.error("could not connect to STOMP", ar.cause());
           }
         });
+  }
+
+  @Override
+  public void stop() throws Exception {
+    super.stop();
+    ProxyHelper.unregisterService(jsonObjectMessageConsumer);
   }
 }

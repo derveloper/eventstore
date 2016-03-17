@@ -1,7 +1,6 @@
 package eventstore.boundary;
 
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -18,8 +17,6 @@ import java.net.URLDecoder;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static eventstore.shared.constants.Addresses.EVENT_SUBSCRIBE_ADDRESS;
-import static eventstore.shared.constants.Addresses.EVENT_UNSUBSCRIBE_ADDRESS;
 import static eventstore.shared.constants.MessageFields.*;
 import static eventstore.shared.constants.SharedDataKeys.EVENTSTORE_CONFIG_MAP;
 import static eventstore.shared.constants.SharedDataKeys.STOMP_BRIDGE_ADDRESS_KEY;
@@ -31,7 +28,6 @@ public class StompBridge extends AbstractVerticle {
   @Override
   public void start() throws Exception {
     logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
-    final EventBus eventBus = vertx.eventBus();
     final Integer localPort = config().getInteger("stomp.port", 8091);
     final String hostAddress;
     final StompServerHandler stompServerHandler = StompServerHandler.create(vertx);
@@ -68,7 +64,6 @@ public class StompBridge extends AbstractVerticle {
                          query.put(EVENT_CLIENT_ID_FIELD, serverFrame.connection().session());
 
                          logger.debug(String.format("subscribing: %s", query.encodePrettily()));
-                         eventBus.send(EVENT_SUBSCRIBE_ADDRESS, query);
                          pushApi.subscribe(serverFrame.connection().session(), destination.trim());
                          System.out.println("subscribe");
                          stompServerHandler
@@ -113,8 +108,8 @@ public class StompBridge extends AbstractVerticle {
     final String[] pairs = query.split("&");
     for (final String pair : pairs) {
       final int idx = pair.indexOf("=");
-      query_pairs
-          .put(URLDecoder.decode(pair.substring(0, idx), "UTF-8"), URLDecoder.decode(pair.substring(idx + 1), "UTF-8"));
+      query_pairs.put(URLDecoder.decode(pair.substring(0, idx), "UTF-8"),
+                      URLDecoder.decode(pair.substring(idx + 1), "UTF-8"));
     }
     return query_pairs;
   }

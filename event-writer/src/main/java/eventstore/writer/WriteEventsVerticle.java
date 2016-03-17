@@ -2,28 +2,32 @@ package eventstore.writer;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.serviceproxy.ProxyHelper;
 
 import static eventstore.shared.constants.Addresses.*;
 
 
 public class WriteEventsVerticle extends AbstractVerticle {
-  private EventBus eventBus;
-  private Logger logger;
+
+  private MessageConsumer<JsonObject> jsonObjectMessageConsumer;
 
   @Override
   public void start() throws Exception {
-    logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
-    eventBus = vertx.eventBus();
-    eventBus.consumer(WRITE_EVENTS_ADDRESS, message -> {
-      logger.debug(String.format("consume write.events %s", ((JsonArray) message.body()).encodePrettily()));
-      eventBus.send(PERSIST_EVENTS_ADDRESS, message.body(), messageAsyncResult -> {
-        if (messageAsyncResult.succeeded()) {
-          eventBus.publish(CACHE_EVENTS_ADDRESS, message.body());
-        }
-      });
-    });
+    Logger logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
+    EventBus eventBus = vertx.eventBus();
+    EventWriter service = new EventWriterImpl(eventBus);
+    jsonObjectMessageConsumer = ProxyHelper.registerService(EventWriter.class, vertx, service, "event-writer");
+    logger.info("deployed");
+  }
+
+  @Override
+  public void stop() throws Exception {
+    super.stop();
+    ProxyHelper.unregisterService(jsonObjectMessageConsumer);
   }
 }
