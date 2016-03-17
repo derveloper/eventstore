@@ -116,7 +116,7 @@ public class HttpApi extends AbstractVerticle {
               (ReplyException) reply.cause();
           logger.warn(String.format("http respondWithReply failed: %s", cause.getMessage()));
 
-          routingContext.response().setStatusCode(cause.failureCode()).end();
+          routingContext.response().setStatusCode(404).end();
         }
       });
     };
