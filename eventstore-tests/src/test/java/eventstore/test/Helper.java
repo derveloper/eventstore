@@ -1,4 +1,4 @@
-package eventstore.boundary;
+package eventstore.test;
 
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;

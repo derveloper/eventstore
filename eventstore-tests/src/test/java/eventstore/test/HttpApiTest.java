@@ -1,5 +1,6 @@
-package eventstore.boundary;
+package eventstore.test;
 
+import eventstore.boundary.HttpApi;
 import eventstore.cache.EventCacheVerticle;
 import eventstore.persistence.InMemoryEventPersistenceVerticle;
 import eventstore.reader.ReadEventsVerticle;
@@ -20,7 +21,7 @@ import java.net.ServerSocket;
 import java.util.Optional;
 import java.util.UUID;
 
-import static eventstore.boundary.Helper.deployBlocking;
+import static eventstore.test.Helper.deployBlocking;
 
 
 @RunWith(VertxUnitRunner.class)

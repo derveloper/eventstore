@@ -46,6 +46,7 @@ public class HttpApi extends AbstractVerticle {
 
   private Handler<RoutingContext> writeEvents() {
     return routingContext -> {
+      routingContext.response().putHeader("content-type", "application/json");
       final String bodyAsString = routingContext.getBodyAsString();
       final JsonArray events = new JsonArray();
       final String streamName = routingContext.request().getParam(EVENT_STREAM_NAME_FIELD);
