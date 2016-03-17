@@ -1,5 +1,6 @@
 package eventstore.boundary;
 
+import eventstore.reader.EventReader;
 import eventstore.shared.entity.PersistedEvent;
 import eventstore.writer.EventWriter;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -20,7 +21,6 @@ import io.vertx.ext.web.handler.BodyHandler;
 
 import java.util.Map;
 
-import static eventstore.shared.constants.Addresses.READ_EVENTS_ADDRESS;
 import static eventstore.shared.constants.MessageFields.*;
 
 
@@ -28,6 +28,7 @@ public class HttpApi extends AbstractVerticle {
   private EventBus eventBus;
   private Logger logger;
   private EventWriter eventWriter;
+  private EventReader eventReader;
 
   @Override
   public void start() throws Exception {
@@ -37,9 +38,10 @@ public class HttpApi extends AbstractVerticle {
     final Router router = Router.router(vertx);
     router.route().handler(BodyHandler.create());
     eventWriter = EventWriter.createProxy(vertx, "event-writer");
+    eventReader = EventReader.createProxy(vertx, "event-reader");
 
     router.post("/stream/:streamName*").handler(writeEvents());
-    router.get("/stream/:streamName*").handler(sendMessage(READ_EVENTS_ADDRESS, true));
+    router.get("/stream/:streamName*").handler(readEvents());
 
     listen(httpServer, router);
   }
@@ -83,54 +85,41 @@ public class HttpApi extends AbstractVerticle {
     };
   }
 
-  private Handler<RoutingContext> sendMessage(final String address, final boolean respondWithReply) {
+  private Handler<RoutingContext> readEvents() {
     return routingContext -> {
       routingContext.response().putHeader("content-type", "application/json");
 
-      if (respondWithReply) {
-        final JsonObject requestBody;
-        if (routingContext.getBody().length() > 0) {
-          requestBody = routingContext.getBodyAsJson();
+      final JsonObject requestBody;
+      if (routingContext.getBody().length() > 0) {
+        requestBody = routingContext.getBodyAsJson();
+      }
+      else {
+        requestBody = new JsonObject();
+      }
+
+      for (final Map.Entry<String, String> entry : routingContext.request().params()) {
+        requestBody.put(entry.getKey(), entry.getValue());
+      }
+
+      final String streamName = routingContext.request().getParam(EVENT_STREAM_NAME_FIELD);
+      requestBody.put(EVENT_STREAM_NAME_FIELD, streamName);
+
+      eventReader.read(requestBody, reply -> {
+        if (reply.succeeded()) {
+          final String responseBody = reply.result().encodePrettily();
+
+          logger.debug(String.format("http response: %s", responseBody));
+
+          routingContext.response().setStatusCode(HttpResponseStatus.OK.code()).end(responseBody);
         }
         else {
-          requestBody = new JsonObject();
+          @SuppressWarnings("ThrowableResultOfMethodCallIgnored") final ReplyException cause =
+              (ReplyException) reply.cause();
+          logger.warn(String.format("http respondWithReply failed: %s", cause.getMessage()));
+
+          routingContext.response().setStatusCode(cause.failureCode()).end();
         }
-
-        for (final Map.Entry<String, String> entry : routingContext.request().params()) {
-          requestBody.put(entry.getKey(), entry.getValue());
-        }
-
-        final String streamName = routingContext.request().getParam(EVENT_STREAM_NAME_FIELD);
-        requestBody.put(EVENT_STREAM_NAME_FIELD, streamName);
-
-        eventBus.send(address, requestBody, reply -> {
-          if (reply.succeeded()) {
-            final Object body = reply.result().body();
-            final String responseBody;
-
-            if (body instanceof JsonArray) {
-              responseBody = ((JsonArray) body).encodePrettily();
-            }
-            else if (body instanceof JsonObject) {
-              responseBody = ((JsonObject) body).encodePrettily();
-            }
-            else {
-              responseBody = (String) body;
-            }
-
-            logger.debug(String.format("http response: %s", responseBody));
-
-            routingContext.response().setStatusCode(HttpResponseStatus.OK.code()).end(responseBody);
-          }
-          else {
-            @SuppressWarnings("ThrowableResultOfMethodCallIgnored") final ReplyException cause =
-                (ReplyException) reply.cause();
-            logger.warn(String.format("http respondWithReply failed: %s", cause.getMessage()));
-
-            routingContext.response().setStatusCode(cause.failureCode()).end();
-          }
-        });
-      }
+      });
     };
   }
 

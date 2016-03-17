@@ -13,14 +13,13 @@ import static eventstore.shared.constants.Addresses.*;
 
 
 public class WriteEventsVerticle extends AbstractVerticle {
-
   private MessageConsumer<JsonObject> jsonObjectMessageConsumer;
 
   @Override
   public void start() throws Exception {
-    Logger logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
-    EventBus eventBus = vertx.eventBus();
-    EventWriter service = new EventWriterImpl(eventBus);
+    final Logger logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
+    final EventBus eventBus = vertx.eventBus();
+    final EventWriter service = new EventWriterImpl(eventBus);
     jsonObjectMessageConsumer = ProxyHelper.registerService(EventWriter.class, vertx, service, "event-writer");
     logger.info("deployed");
   }

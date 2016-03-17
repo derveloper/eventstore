@@ -1,49 +1,29 @@
 package eventstore.reader;
 
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-
-import static eventstore.shared.constants.Addresses.*;
-import static eventstore.shared.constants.MessageFields.ERROR_FIELD;
-import static eventstore.shared.constants.Messages.NOT_FOUND_MESSAGE;
+import io.vertx.serviceproxy.ProxyHelper;
 
 
 public class ReadEventsVerticle extends AbstractVerticle {
-  private EventBus eventBus;
-  private Logger logger;
+  private MessageConsumer<JsonObject> jsonObjectMessageConsumer;
 
   @Override
   public void start() throws Exception {
-    logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
-    eventBus = vertx.eventBus();
-    eventBus.consumer(READ_EVENTS_ADDRESS, message -> {
-      logger.debug(String.format("consume read.events: %s", ((JsonObject) message.body()).encodePrettily()));
-      final DeliveryOptions cacheDeliveryOptions = new DeliveryOptions()
-          .setSendTimeout(200);
-      eventBus.send(READ_CACHE_EVENTS_ADDRESS, message.body(), cacheDeliveryOptions, messageAsyncResult -> {
-        if (messageAsyncResult.succeeded()) {
-          logger.debug("reply from read.cache.events");
-          message.reply(messageAsyncResult.result().body());
-        }
-        else {
-          logger.debug("reply from read.cache.events not successful, getting event from db");
-          eventBus.send(READ_PERSISTED_EVENTS_ADDRESS, message.body(), dbMessageAsyncResult -> {
-            if (dbMessageAsyncResult.succeeded()) {
-              logger.debug("reply from read.persisted.events");
-              eventBus.send(WRITE_CACHE_EVENTS_ADDRESS, dbMessageAsyncResult.result().body());
-              message.reply(dbMessageAsyncResult.result().body());
-            }
-            else {
-              logger.error("reply from read.persisted.events failed!");
-              message.fail(404, new JsonObject().put(ERROR_FIELD, NOT_FOUND_MESSAGE).encodePrettily());
-            }
-          });
-        }
-      });
-    });
+    final Logger logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
+    final EventBus eventBus = vertx.eventBus();
+    final EventReader service = new EventReaderImpl(eventBus);
+    jsonObjectMessageConsumer = ProxyHelper.registerService(EventReader.class, vertx, service, "event-reader");
+    logger.info("deployed");
+  }
+
+  @Override
+  public void stop() throws Exception {
+    super.stop();
+    ProxyHelper.unregisterService(jsonObjectMessageConsumer);
   }
 }

@@ -16,6 +16,10 @@
             <groupId>cc.vileda</groupId>
             <artifactId>shared-kernel</artifactId>
         </dependency>
+        <dependency>
+            <groupId>cc.vileda</groupId>
+            <artifactId>http-api-shared-kernel</artifactId>
+        </dependency>
     </dependencies>
 
 </project>
