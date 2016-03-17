@@ -18,7 +18,7 @@ class InMemoryEventPersistence implements EventPersistence {
   private Logger logger;
 
   InMemoryEventPersistence() {
-    logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), "inmem-event-reader"));
+    logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), "event-persistence"));
   }
 
   @Override

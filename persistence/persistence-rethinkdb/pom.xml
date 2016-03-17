@@ -17,6 +17,10 @@
             <artifactId>shared-kernel</artifactId>
         </dependency>
         <dependency>
+            <groupId>cc.vileda</groupId>
+            <artifactId>persisted-event-api</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.rethinkdb</groupId>
             <artifactId>rethinkdb-driver</artifactId>
         </dependency>

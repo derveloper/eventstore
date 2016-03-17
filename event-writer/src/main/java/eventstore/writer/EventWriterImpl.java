@@ -19,7 +19,7 @@ class EventWriterImpl implements EventWriter {
   EventWriterImpl(final EventBus eventBus, final Vertx vertx) {
     logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), "event-writer"));
     this.eventBus = eventBus;
-    eventPersistence = EventPersistence.createProxy(vertx, "inmem-event-reader");
+    eventPersistence = EventPersistence.createProxy(vertx, "event-persistence");
     eventCache = EventCache.createProxy(vertx, "event-cache");
   }
 

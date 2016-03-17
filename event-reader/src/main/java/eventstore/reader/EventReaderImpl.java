@@ -23,7 +23,7 @@ class EventReaderImpl implements EventReader {
   EventReaderImpl(final Vertx vertx) {
     logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), "event-reader"));
     eventCache = EventCache.createProxy(vertx, "event-cache");
-    eventPersistence = EventPersistence.createProxy(vertx, "inmem-event-reader");
+    eventPersistence = EventPersistence.createProxy(vertx, "event-persistence");
   }
 
   @Override

@@ -15,9 +15,8 @@ public class InMemoryEventPersistenceVerticle extends AbstractVerticle {
   @Override
   public void start() throws Exception {
     final Logger logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
-    final EventBus eventBus = vertx.eventBus();
     final EventPersistence service = new InMemoryEventPersistence();
-    jsonObjectMessageConsumer = ProxyHelper.registerService(EventPersistence.class, vertx, service, "inmem-event-reader");
+    jsonObjectMessageConsumer = ProxyHelper.registerService(EventPersistence.class, vertx, service, "event-persistence");
     logger.info("deployed");
   }
 

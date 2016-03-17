@@ -11,9 +11,9 @@ import io.vertx.core.json.JsonObject;
 @ProxyGen
 public interface EventPersistence {
   void read(final JsonObject query, final Handler<AsyncResult<JsonArray>> result);
-  static EventPersistence createProxy(Vertx vertx, String address) {
+  static EventPersistence createProxy(final Vertx vertx, final String address) {
     return new EventPersistenceVertxEBProxy(vertx, address);
   }
 
-  void write(JsonArray events, Handler<AsyncResult<Boolean>> result);
+  void write(final JsonArray events, final Handler<AsyncResult<Boolean>> result);
 }
