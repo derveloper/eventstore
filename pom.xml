@@ -11,13 +11,11 @@
     <modules>
         <module>http-api</module>
         <module>shared-kernel</module>
-        <module>persistence-rethinkdb</module>
         <module>event-writer</module>
         <module>push-api</module>
         <module>stomp-bridge</module>
         <module>event-reader</module>
         <module>event-cache</module>
-        <module>persistence-inmemory</module>
         <module>eventstore-tests</module>
         <module>push-api-stomp-bridge-shared-kernel</module>
         <module>http-api-shared-kernel</module>
