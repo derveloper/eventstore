@@ -1,46 +1,29 @@
 package eventstore.persistence;
 
-import eventstore.shared.AbstractEventPersistenceVerticle;
-import io.vertx.core.Handler;
-import io.vertx.core.eventbus.Message;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.serviceproxy.ProxyHelper;
 
-import java.util.LinkedList;
-import java.util.List;
 
-
-public class InMemoryEventPersistenceVerticle extends AbstractEventPersistenceVerticle {
-  private final List<JsonObject> store = new LinkedList<>();
+public class InMemoryEventPersistenceVerticle extends AbstractVerticle {
+  private MessageConsumer<JsonObject> jsonObjectMessageConsumer;
 
   @Override
-  protected Handler<Message<Object>> readPersistedEventsConsumer() {
-    return message -> {
-      final JsonObject body = (JsonObject) message.body();
-      logger.debug(String.format("consume read.persisted.events: %s", body.encodePrettily()));
-
-      message.reply(new JsonArray(Json.encode(store)));
-    };
+  public void start() throws Exception {
+    final Logger logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
+    final EventBus eventBus = vertx.eventBus();
+    final EventPersistence service = new InMemoryEventPersistence();
+    jsonObjectMessageConsumer = ProxyHelper.registerService(EventPersistence.class, vertx, service, "inmem-event-reader");
+    logger.info("deployed");
   }
 
   @Override
-  protected Handler<Message<Object>> writeStoreEventsConsumer() {
-    return message -> {
-      final JsonArray body = (JsonArray) message.body();
-      saveEventIfNotDuplicated(body);
-      message.reply(true);
-    };
-  }
-
-  private void saveEventIfNotDuplicated(final JsonArray body) {
-    //noinspection unchecked
-    store.addAll(body.getList());
-    logger.debug(String.format("persisted %s", body.encodePrettily()));
-    if (!body.isEmpty()) {
-      final JsonObject first = body.getJsonObject(0);
-      eventBus.publish(
-          String.format("/stream/%s?eventType=%s", first.getString("streamName"), first.getString("eventType")), body);
-    }
+  public void stop() throws Exception {
+    super.stop();
+    ProxyHelper.unregisterService(jsonObjectMessageConsumer);
   }
 }

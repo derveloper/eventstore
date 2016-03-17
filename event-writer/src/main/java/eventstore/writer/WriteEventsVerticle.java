@@ -16,7 +16,7 @@ public class WriteEventsVerticle extends AbstractVerticle {
   public void start() throws Exception {
     final Logger logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
     final EventBus eventBus = vertx.eventBus();
-    final EventWriter service = new EventWriterImpl(eventBus);
+    final EventWriter service = new EventWriterImpl(eventBus, vertx);
     jsonObjectMessageConsumer = ProxyHelper.registerService(EventWriter.class, vertx, service, "event-writer");
     logger.info("deployed");
   }

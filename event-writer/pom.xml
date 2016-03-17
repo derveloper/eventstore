@@ -21,6 +21,14 @@
             <artifactId>http-api-shared-kernel</artifactId>
         </dependency>
         <dependency>
+            <groupId>cc.vileda</groupId>
+            <artifactId>persisted-event-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cc.vileda</groupId>
+            <artifactId>event-cache</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-service-proxy</artifactId>
         </dependency>

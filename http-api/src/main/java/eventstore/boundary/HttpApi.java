@@ -111,7 +111,8 @@ public class HttpApi extends AbstractVerticle {
           routingContext.response().setStatusCode(HttpResponseStatus.OK.code()).end(responseBody);
         }
         else {
-          @SuppressWarnings("ThrowableResultOfMethodCallIgnored") final ReplyException cause =
+          @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
+          final ReplyException cause =
               (ReplyException) reply.cause();
           logger.warn(String.format("http respondWithReply failed: %s", cause.getMessage()));
 

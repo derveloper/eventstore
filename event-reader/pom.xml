@@ -20,6 +20,14 @@
             <groupId>cc.vileda</groupId>
             <artifactId>http-api-shared-kernel</artifactId>
         </dependency>
+        <dependency>
+            <groupId>cc.vileda</groupId>
+            <artifactId>event-cache-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cc.vileda</groupId>
+            <artifactId>persisted-event-api</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

@@ -16,7 +16,7 @@ public class ReadEventsVerticle extends AbstractVerticle {
   public void start() throws Exception {
     final Logger logger = LoggerFactory.getLogger(String.format("%s_%s", getClass(), deploymentID()));
     final EventBus eventBus = vertx.eventBus();
-    final EventReader service = new EventReaderImpl(eventBus);
+    final EventReader service = new EventReaderImpl(vertx);
     jsonObjectMessageConsumer = ProxyHelper.registerService(EventReader.class, vertx, service, "event-reader");
     logger.info("deployed");
   }

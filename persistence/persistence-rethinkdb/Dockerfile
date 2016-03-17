@@ -1,6 +1,6 @@
 FROM vertx/vertx3
 
-ENV VERTICLE_NAME eventstore.persistence.RethinkDBEventPersistenceVerticle
+ENV VERTICLE_NAME eventstore.eventstore.persistence.RethinkDBEventPersistenceVerticle
 ENV VERTICLE_FILE target/*fat*.jar
 
 # Set the location of the verticles

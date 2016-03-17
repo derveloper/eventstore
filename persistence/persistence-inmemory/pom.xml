@@ -16,6 +16,10 @@
             <groupId>cc.vileda</groupId>
             <artifactId>shared-kernel</artifactId>
         </dependency>
+        <dependency>
+            <groupId>cc.vileda</groupId>
+            <artifactId>persisted-event-api</artifactId>
+        </dependency>
     </dependencies>
 
 </project>
