@@ -22,7 +22,11 @@
         </dependency>
         <dependency>
             <groupId>cc.vileda</groupId>
-            <artifactId>http-api-shared-kernel</artifactId>
+            <artifactId>event-reader-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cc.vileda</groupId>
+            <artifactId>event-writer-api</artifactId>
         </dependency>
     </dependencies>
 </project>

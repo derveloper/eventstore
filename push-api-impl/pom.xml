@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>stomp-bridge</artifactId>
+    <artifactId>push-api-impl</artifactId>
 
     <dependencies>
         <dependency>
@@ -24,6 +24,13 @@
             <groupId>io.vertx</groupId>
             <artifactId>vertx-stomp</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-service-proxy</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-codegen</artifactId>
+        </dependency>
     </dependencies>
-
 </project>
