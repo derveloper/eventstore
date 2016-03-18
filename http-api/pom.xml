@@ -13,10 +13,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>cc.vileda</groupId>
-            <artifactId>shared-kernel</artifactId>
-        </dependency>
-        <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-web</artifactId>
         </dependency>

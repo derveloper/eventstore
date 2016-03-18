@@ -11,9 +11,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-import static eventstore.shared.constants.MessageFields.ERROR_FIELD;
-import static eventstore.shared.constants.Messages.NOT_FOUND_MESSAGE;
-
 
 class EventReaderImpl implements EventReader {
   private final EventPersistence eventPersistence;
@@ -43,7 +40,7 @@ class EventReaderImpl implements EventReader {
           }
           else {
             logger.error("reply from read.persisted.events failed!");
-            result.handle(Future.failedFuture(new JsonObject().put(ERROR_FIELD, NOT_FOUND_MESSAGE).encodePrettily()));
+            result.handle(Future.failedFuture(new JsonObject().put("error", "not found").encodePrettily()));
           }
         });
       }

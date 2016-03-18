@@ -12,9 +12,6 @@ import io.vertx.core.logging.LoggerFactory;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static eventstore.shared.constants.MessageFields.*;
-import static eventstore.shared.constants.Messages.NOT_FOUND_MESSAGE;
-
 
 class EventCacheImpl implements EventCache {
   private final Map<String, Map<String, JsonObject>> eventCache = new LinkedHashMap<>();
@@ -22,20 +19,20 @@ class EventCacheImpl implements EventCache {
 
   @Override
   public void read(JsonObject query, Handler<AsyncResult<JsonArray>> result) {
-    final String streamName = (String) query.remove(EVENT_STREAM_NAME_FIELD);
+    final String streamName = (String) query.remove("streamName");
     logger.debug(String.format("consume read.cache.events: %s", query.encodePrettily()));
-    if (query.containsKey(EVENT_ID_FIELD)) {
+    if (query.containsKey("id")) {
       if (eventCache.containsKey(streamName) &&
-          eventCache.get(streamName).containsKey(query.getString(EVENT_ID_FIELD))) {
+          eventCache.get(streamName).containsKey(query.getString("id"))) {
         result.handle(Future.succeededFuture(new JsonArray().add(
-            new JsonObject(Json.encode(eventCache.get(streamName).get(query.getString(EVENT_ID_FIELD)))))));
+            new JsonObject(Json.encode(eventCache.get(streamName).get(query.getString("id")))))));
       }
       else {
-        result.handle(Future.failedFuture(new JsonObject().put(ERROR_FIELD, NOT_FOUND_MESSAGE).encodePrettily()));
+        result.handle(Future.failedFuture(new JsonObject().put("error", "not found").encodePrettily()));
       }
     }
     else if (!query.isEmpty()) {
-      result.handle(Future.failedFuture(new JsonObject().put(ERROR_FIELD, NOT_FOUND_MESSAGE).encodePrettily()));
+      result.handle(Future.failedFuture(new JsonObject().put("error", "not found").encodePrettily()));
     }
     else {
       final JsonArray jsonArray = new JsonArray();
@@ -51,8 +48,8 @@ class EventCacheImpl implements EventCache {
     logger.debug("writing to cache");
     events.forEach(o -> {
       final JsonObject object = (JsonObject) o;
-      final String streamName = (String) object.remove(EVENT_STREAM_NAME_FIELD);
-      final String id = object.getString(EVENT_ID_FIELD);
+      final String streamName = (String) object.remove("streamName");
+      final String id = object.getString("id");
       eventCache.putIfAbsent(streamName, new LinkedHashMap<>());
       if (!eventCache.get(streamName).containsKey(id)) {
         eventCache.get(streamName).put(id, object);

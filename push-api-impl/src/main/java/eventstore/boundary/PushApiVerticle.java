@@ -13,9 +13,6 @@ import io.vertx.ext.stomp.StompClientConnection;
 import io.vertx.ext.stomp.StompClientOptions;
 import io.vertx.serviceproxy.ProxyHelper;
 
-import static eventstore.shared.constants.SharedDataKeys.EVENTSTORE_CONFIG_MAP;
-import static eventstore.shared.constants.SharedDataKeys.STOMP_BRIDGE_ADDRESS_KEY;
-
 
 public class PushApiVerticle extends AbstractVerticle {
   private Logger logger;
@@ -38,10 +35,10 @@ public class PushApiVerticle extends AbstractVerticle {
     else {
       if(vertx.isClustered()) {
         final SharedData sd = vertx.sharedData();
-        sd.<String, String>getClusterWideMap(EVENTSTORE_CONFIG_MAP, res -> {
+        sd.<String, String>getClusterWideMap("eventstore-config", res -> {
           if (res.succeeded()) {
             final AsyncMap<String, String> map = res.result();
-            map.get(STOMP_BRIDGE_ADDRESS_KEY, resGet -> {
+            map.get("stomp-bridge-address", resGet -> {
               if (resGet.succeeded()) {
                 // Successfully got the value
                 final String stompAddress = resGet.result();

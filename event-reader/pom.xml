@@ -14,10 +14,6 @@
     <dependencies>
         <dependency>
             <groupId>cc.vileda</groupId>
-            <artifactId>shared-kernel</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>cc.vileda</groupId>
             <artifactId>event-reader-api</artifactId>
         </dependency>
         <dependency>

@@ -12,7 +12,6 @@
     <artifactId>persistence</artifactId>
     <packaging>pom</packaging>
     <modules>
-        <module>persistence-cassandra</module>
         <module>persistence-inmemory</module>
         <module>persistence-rethinkdb</module>
     </modules>

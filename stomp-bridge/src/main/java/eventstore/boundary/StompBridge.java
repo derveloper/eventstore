@@ -17,10 +17,6 @@ import java.net.URLDecoder;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static eventstore.shared.constants.MessageFields.*;
-import static eventstore.shared.constants.SharedDataKeys.EVENTSTORE_CONFIG_MAP;
-import static eventstore.shared.constants.SharedDataKeys.STOMP_BRIDGE_ADDRESS_KEY;
-
 
 public class StompBridge extends AbstractVerticle {
   private Logger logger;
@@ -65,9 +61,9 @@ public class StompBridge extends AbstractVerticle {
                       throw new URISyntaxException(uri.getPath(), "no stream specified");
                     }
 
-                    query.put(EVENT_STREAM_NAME_FIELD, split[2]);
-                    query.put(EVENT_ADDRESS_FIELD, destination.trim());
-                    query.put(EVENT_CLIENT_ID_FIELD, serverFrame.connection().session());
+                    query.put("streamName", split[2]);
+                    query.put("address", destination.trim());
+                    query.put("clientId", serverFrame.connection().session());
 
                     logger.debug(String.format("subscribing: %s", query.encodePrettily()));
                     pushApi.subscribe(serverFrame.connection().session(), destination.trim());
@@ -90,10 +86,10 @@ public class StompBridge extends AbstractVerticle {
   private void putAddressToSharedData(String hostAddress) {
     final SharedData sd = vertx.sharedData();
 
-    sd.<String, String>getClusterWideMap(EVENTSTORE_CONFIG_MAP, res -> {
+    sd.<String, String>getClusterWideMap("eventstore-config", res -> {
       if (res.succeeded()) {
         final AsyncMap<String, String> map = res.result();
-        map.put(STOMP_BRIDGE_ADDRESS_KEY, hostAddress, resPut -> {
+        map.put("stomp-bridge-address", hostAddress, resPut -> {
           if (resPut.succeeded()) {
             logger.info(String.format("putted address %s", hostAddress));
           }

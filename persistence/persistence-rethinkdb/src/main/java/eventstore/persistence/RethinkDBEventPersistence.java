@@ -17,9 +17,6 @@ import io.vertx.core.logging.LoggerFactory;
 import java.util.HashMap;
 import java.util.List;
 
-import static eventstore.shared.constants.MessageFields.*;
-import static eventstore.shared.constants.Messages.NOT_FOUND_MESSAGE;
-
 
 class RethinkDBEventPersistence implements EventPersistence {
   private static final RethinkDB r = RethinkDB.r;
@@ -47,21 +44,21 @@ class RethinkDBEventPersistence implements EventPersistence {
         final MapObject mapObject = RethinkUtils.getMapObjectFromJson(query);
         final List<HashMap<String, Object>> items = r.db("eventstore").table("events")
                                                      .filter(mapObject)
-                                                     .orderBy(EVENT_CREATED_AT_FIELD)
+                                                     .orderBy("createdAt")
                                                      .run(conn);
 
         if (items.isEmpty()) {
           result.handle(Future.failedFuture(
-              new ReplyException(ReplyFailure.RECIPIENT_FAILURE, 404, NOT_FOUND_MESSAGE)));
+              new ReplyException(ReplyFailure.RECIPIENT_FAILURE, 404, "not found")));
         }
         else {
           final JsonArray jsonArray = new JsonArray();
           items.forEach(hashMap -> {
             final JsonObject value = new JsonObject();
             hashMap.forEach((o, o2) -> value.put((String) o, o2));
-            final JsonObject origData = value.getJsonObject(EVENT_DATA_FIELD).getJsonObject("map");
-            value.remove(EVENT_DATA_FIELD);
-            value.put(EVENT_DATA_FIELD, origData);
+            final JsonObject origData = value.getJsonObject("data").getJsonObject("map");
+            value.remove("data");
+            value.put("data", origData);
             jsonArray.add(value);
           });
           future.complete(jsonArray);
@@ -118,7 +115,7 @@ class RethinkDBEventPersistence implements EventPersistence {
     }, ar -> {
       if (ar.failed()) {
         //noinspection ThrowableResultOfMethodCallIgnored
-        result.handle(Future.failedFuture(new JsonObject().put(ERROR_FIELD, ar.cause().getMessage()).encode()));
+        result.handle(Future.failedFuture(new JsonObject().put("error", ar.cause().getMessage()).encode()));
       }
       else {
         result.handle(Future.succeededFuture());

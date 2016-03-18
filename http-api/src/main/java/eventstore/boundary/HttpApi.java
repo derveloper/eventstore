@@ -1,12 +1,10 @@
 package eventstore.boundary;
 
 import eventstore.reader.EventReader;
-import eventstore.shared.entity.PersistedEvent;
 import eventstore.writer.EventWriter;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Handler;
-import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
@@ -20,8 +18,6 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
 import java.util.Map;
-
-import static eventstore.shared.constants.MessageFields.*;
 
 
 public class HttpApi extends AbstractVerticle {
@@ -49,25 +45,25 @@ public class HttpApi extends AbstractVerticle {
       routingContext.response().putHeader("content-type", "application/json");
       final String bodyAsString = routingContext.getBodyAsString();
       final JsonArray events = new JsonArray();
-      final String streamName = routingContext.request().getParam(EVENT_STREAM_NAME_FIELD);
+      final String streamName = routingContext.request().getParam("streamName");
 
       if (bodyAsString.trim().startsWith("[")) {
         routingContext.getBodyAsJsonArray().forEach(o -> {
           final JsonObject jsonObject = (JsonObject) o;
           final PersistedEvent persistedEvent = new PersistedEvent(
-              jsonObject.getString(EVENT_ID_FIELD),
+              jsonObject.getString("id"),
               streamName,
-              jsonObject.getString(EVENT_TYPE_FIELD, "undefined"),
-              jsonObject.getJsonObject(EVENT_DATA_FIELD, new JsonObject()));
+              jsonObject.getString("eventType", "undefined"),
+              jsonObject.getJsonObject("data", new JsonObject()));
           events.add(new JsonObject(Json.encode(persistedEvent)));
         });
       }
       else {
         final PersistedEvent persistedEvent = new PersistedEvent(
-            routingContext.getBodyAsJson().getString(EVENT_ID_FIELD),
+            routingContext.getBodyAsJson().getString("id"),
             streamName,
-            routingContext.getBodyAsJson().getString(EVENT_TYPE_FIELD, "undefined"),
-            routingContext.getBodyAsJson().getJsonObject(EVENT_DATA_FIELD, new JsonObject()));
+            routingContext.getBodyAsJson().getString("eventType", "undefined"),
+            routingContext.getBodyAsJson().getJsonObject("data", new JsonObject()));
         events.add(new JsonObject(Json.encode(persistedEvent)));
       }
 
@@ -99,8 +95,8 @@ public class HttpApi extends AbstractVerticle {
         requestBody.put(entry.getKey(), entry.getValue());
       }
 
-      final String streamName = routingContext.request().getParam(EVENT_STREAM_NAME_FIELD);
-      requestBody.put(EVENT_STREAM_NAME_FIELD, streamName);
+      final String streamName = routingContext.request().getParam("streamName");
+      requestBody.put("streamName", streamName);
 
       eventReader.read(requestBody, reply -> {
         if (reply.succeeded()) {

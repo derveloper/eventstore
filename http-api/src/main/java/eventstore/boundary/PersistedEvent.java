@@ -1,4 +1,4 @@
-package eventstore.shared.entity;
+package eventstore.boundary;
 
 import java.io.Serializable;
 import java.util.Date;
