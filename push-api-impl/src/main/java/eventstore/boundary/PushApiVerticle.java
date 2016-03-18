@@ -36,27 +36,32 @@ public class PushApiVerticle extends AbstractVerticle {
       connectToStomp(eventBus, config().getString("stomp.address"));
     }
     else {
-      final SharedData sd = vertx.sharedData();
-      sd.<String, String>getClusterWideMap(EVENTSTORE_CONFIG_MAP, res -> {
-        if (res.succeeded()) {
-          final AsyncMap<String, String> map = res.result();
-          map.get(STOMP_BRIDGE_ADDRESS_KEY, resGet -> {
-            if (resGet.succeeded()) {
-              // Successfully got the value
-              final String stompAddress = resGet.result();
-              connectToStomp(eventBus, stompAddress);
-            }
-            else {
-              logger.error("failed getting stomp-address", resGet.cause());
-              locateStompBridgeAndConnect(eventBus);
-            }
-          });
-        }
-        else {
-          logger.error("failed getting stomp-address", res.cause());
-          locateStompBridgeAndConnect(eventBus);
-        }
-      });
+      if(vertx.isClustered()) {
+        final SharedData sd = vertx.sharedData();
+        sd.<String, String>getClusterWideMap(EVENTSTORE_CONFIG_MAP, res -> {
+          if (res.succeeded()) {
+            final AsyncMap<String, String> map = res.result();
+            map.get(STOMP_BRIDGE_ADDRESS_KEY, resGet -> {
+              if (resGet.succeeded()) {
+                // Successfully got the value
+                final String stompAddress = resGet.result();
+                connectToStomp(eventBus, stompAddress);
+              }
+              else {
+                logger.error("failed getting stomp-address", resGet.cause());
+                locateStompBridgeAndConnect(eventBus);
+              }
+            });
+          }
+          else {
+            logger.error("failed getting stomp-address", res.cause());
+            locateStompBridgeAndConnect(eventBus);
+          }
+        });
+      }
+      else {
+        connectToStomp(eventBus, "localhost");
+      }
     }
   }
 

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>eventstore</artifactId>
+        <groupId>cc.vileda</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>monolith</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>cc.vileda</groupId>
+            <artifactId>event-cache</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cc.vileda</groupId>
+            <artifactId>event-reader</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cc.vileda</groupId>
+            <artifactId>event-writer</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cc.vileda</groupId>
+            <artifactId>http-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cc.vileda</groupId>
+            <artifactId>persistence-rethinkdb</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cc.vileda</groupId>
+            <artifactId>push-api-impl</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cc.vileda</groupId>
+            <artifactId>stomp-bridge</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.4.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <manifestEntries>
+                                        <Main-Class>eventstore.monolith.Eventstore</Main-Class>
+                                    </manifestEntries>
+                                </transformer>
+                            </transformers>
+                            <artifactSet/>
+                            <outputFile>${project.build.directory}/${project.artifactId}-${project.version}-fat.jar</outputFile>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

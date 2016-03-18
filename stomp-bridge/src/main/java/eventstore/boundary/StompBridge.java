@@ -33,8 +33,13 @@ public class StompBridge extends AbstractVerticle {
     final StompServerHandler stompServerHandler = StompServerHandler.create(vertx);
 
     if (config().getString("stomp.address", null) == null) {
-      hostAddress = Inet4Address.getLocalHost().getHostAddress();
-      putAddressToSharedData(hostAddress);
+      if (vertx.isClustered()) {
+        hostAddress = Inet4Address.getLocalHost().getHostAddress();
+        putAddressToSharedData(hostAddress);
+      }
+      else {
+        hostAddress = "0.0.0.0";
+      }
     }
     else {
       hostAddress = config().getString("stomp.address");
@@ -44,38 +49,39 @@ public class StompBridge extends AbstractVerticle {
 
     final StompServer stompServer = StompServer
         .create(vertx)
-        .handler(stompServerHandler
-                     .closeHandler(stompServerConnection -> pushApi.unsubscribe(stompServerConnection.session()))
-                     .subscribeHandler(serverFrame -> {
-                       String destination = serverFrame.frame().getDestination();
-                       try {
-                         final URI uri = new URI(destination.trim());
-                         final JsonObject query = uri.toString().contains("?")
-                                                  ? new JsonObject(splitQuery(uri))
-                                                  : new JsonObject();
-                         final String[] split = uri.getPath().split("/");
+        .handler(
+            stompServerHandler
+                .closeHandler(stompServerConnection -> pushApi.unsubscribe(stompServerConnection.session()))
+                .subscribeHandler(serverFrame -> {
+                  String destination = serverFrame.frame().getDestination();
+                  try {
+                    final URI uri = new URI(destination.trim());
+                    final JsonObject query = uri.toString().contains("?")
+                                             ? new JsonObject(splitQuery(uri))
+                                             : new JsonObject();
+                    final String[] split = uri.getPath().split("/");
 
-                         if (split.length != 3) {
-                           throw new URISyntaxException(uri.getPath(), "no stream specified");
-                         }
+                    if (split.length != 3) {
+                      throw new URISyntaxException(uri.getPath(), "no stream specified");
+                    }
 
-                         query.put(EVENT_STREAM_NAME_FIELD, split[2]);
-                         query.put(EVENT_ADDRESS_FIELD, destination.trim());
-                         query.put(EVENT_CLIENT_ID_FIELD, serverFrame.connection().session());
+                    query.put(EVENT_STREAM_NAME_FIELD, split[2]);
+                    query.put(EVENT_ADDRESS_FIELD, destination.trim());
+                    query.put(EVENT_CLIENT_ID_FIELD, serverFrame.connection().session());
 
-                         logger.debug(String.format("subscribing: %s", query.encodePrettily()));
-                         pushApi.subscribe(serverFrame.connection().session(), destination.trim());
-                         System.out.println("subscribe");
-                         stompServerHandler
-                             .getOrCreateDestination(destination.trim())
-                             .subscribe(serverFrame.connection(),
-                                        serverFrame.frame());
-                       }
-                       catch (UnsupportedEncodingException |
-                           URISyntaxException e) {
-                         logger.error("invalid URI format", e);
-                       }
-                     })
+                    logger.debug(String.format("subscribing: %s", query.encodePrettily()));
+                    pushApi.subscribe(serverFrame.connection().session(), destination.trim());
+                    System.out.println("subscribe");
+                    stompServerHandler
+                        .getOrCreateDestination(destination.trim())
+                        .subscribe(serverFrame.connection(),
+                                   serverFrame.frame());
+                  }
+                  catch (UnsupportedEncodingException |
+                      URISyntaxException e) {
+                    logger.error("invalid URI format", e);
+                  }
+                })
                 )
         .listen(localPort, hostAddress);
     logger.info(String.format("STOMP listening on %s:%d", hostAddress, stompServer.actualPort()));

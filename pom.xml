@@ -23,6 +23,7 @@
         <module>persistence</module>
         <module>event-cache-api</module>
         <module>persisted-event-api</module>
+        <module>monolith</module>
     </modules>
 
     <properties>
@@ -75,6 +76,11 @@
             <dependency>
                 <groupId>cc.vileda</groupId>
                 <artifactId>persistence-inmemory</artifactId>
+                <version>1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>cc.vileda</groupId>
+                <artifactId>persistence-rethinkdb</artifactId>
                 <version>1.0-SNAPSHOT</version>
             </dependency>
             <dependency>
