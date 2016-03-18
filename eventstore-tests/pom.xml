@@ -42,6 +42,10 @@
         </dependency>
         <dependency>
             <groupId>cc.vileda</groupId>
+            <artifactId>push-api-impl</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cc.vileda</groupId>
             <artifactId>shared-kernel</artifactId>
         </dependency>
     </dependencies>
