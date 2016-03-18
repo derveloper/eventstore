@@ -14,10 +14,6 @@
     <dependencies>
         <dependency>
             <groupId>cc.vileda</groupId>
-            <artifactId>event-cache</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>cc.vileda</groupId>
             <artifactId>event-reader</artifactId>
         </dependency>
         <dependency>
